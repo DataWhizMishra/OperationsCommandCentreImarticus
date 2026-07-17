@@ -1089,6 +1089,7 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
         <div class="flbl" style="margin-bottom:0">Choose an avatar</div>
         <button class="btn btn-ghost" type="button" style="font-size:11px;padding:5px 10px" onclick="shuffleAvatarPicker()"><i class="ti ti-refresh" style="font-size:11px"></i> Shuffle</button>
       </div>
+      <div id="avatar-picker-styles"></div>
       <div class="av-picker-grid" id="avatar-picker"></div>
     </div>
     <button class="btn btn-gr" onclick="addMember()" style="width:100%;margin-top:4px"><i class="ti ti-plus"></i> Add member</button>
@@ -1263,9 +1264,23 @@ function ckey(p,d,i){return p+'__'+d+'__'+i}
 function todayName(){return['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()]||'Monday'}
 
 /* ── avatars ── */
-function avatarUrl(seed){return'https://api.dicebear.com/9.x/adventurer/svg?seed='+encodeURIComponent(seed)+'&radius=50&backgroundColor=transparent';}
+const AVATAR_STYLES=[
+  {id:'adventurer',label:'Adventurer'},
+  {id:'notionists',label:'Notionists'},
+  {id:'micah',label:'Micah'},
+  {id:'avataaars',label:'Avataaars'},
+  {id:'bottts',label:'Bottts'},
+  {id:'pixel-art',label:'Pixel Art'},
+  {id:'lorelei',label:'Lorelei'},
+  {id:'open-peeps',label:'Open Peeps'},
+  {id:'big-ears',label:'Big Ears'},
+  {id:'thumbs',label:'Thumbs'},
+];
+const DEFAULT_AVATAR_STYLE='adventurer';
+function avatarUrl(seed,style){return'https://api.dicebear.com/9.x/'+(style||DEFAULT_AVATAR_STYLE)+'/svg?seed='+encodeURIComponent(seed)+'&radius=50&backgroundColor=transparent';}
 function avatarSeedFor(obj){return(obj&&(obj.avatarSeed||obj.name))||'user';}
-function avatarImg(obj){return`<img src="${avatarUrl(avatarSeedFor(obj))}" alt="">`;}
+function avatarStyleFor(obj){return(obj&&obj.avatarStyle)||DEFAULT_AVATAR_STYLE;}
+function avatarImg(obj){return`<img src="${avatarUrl(avatarSeedFor(obj),avatarStyleFor(obj))}" alt="">`;}
 
 /* ── theme ── */
 function applyTheme(t){
@@ -1437,7 +1452,7 @@ function initMissing(){
 function loginAvatar(id,color,name){
   const c=COL[color]||COL.gr;
   const el=document.getElementById('lav_'+id);
-  if(el){el.innerHTML=avatarImg({name,avatarSeed:(D.leaderAvatars||{})[id]});el.style.background=c[0];el.style.color=c[1];}
+  if(el){el.innerHTML=avatarImg({name,avatarSeed:(D.leaderAvatars||{})[id],avatarStyle:(D.leaderAvatarStyles||{})[id]});el.style.background=c[0];el.style.color=c[1];}
 }
 function loginMemberBtn(m){
   const c=COL[m.color]||COL.gr;
@@ -1557,7 +1572,8 @@ function selectProfile(id,name,role,init,color,uRole){
   const av=document.getElementById('lpinav');
   const member=D.members.find(x=>x.id===id);
   const seed=member?member.avatarSeed:(D.leaderAvatars||{})[id];
-  av.innerHTML=avatarImg({name,avatarSeed:seed});av.style.background=c[0];av.style.color=c[1];
+  const style=member?member.avatarStyle:(D.leaderAvatarStyles||{})[id];
+  av.innerHTML=avatarImg({name,avatarSeed:seed,avatarStyle:style});av.style.background=c[0];av.style.color=c[1];
   av._data={id,name,role,init,color,uRole};
   document.getElementById('lpinname').textContent=name;
   document.getElementById('lpinrole').textContent=role;
@@ -1582,7 +1598,8 @@ function doLogin(){
     const role=isManager?'manager':isOg?'ogmanager':isRitesh?'ritesh':'member';
     const memberRec=D.members.find(m=>m.id===loginSelId);
     const avatarSeed=memberRec?memberRec.avatarSeed:(D.leaderAvatars||{})[loginSelId];
-    currentUser={id:loginSelId,name:document.getElementById('lpinname').textContent,role,roleLabel:document.getElementById('lpinrole').textContent,init:av.init||loginSelId,color:av.color||'gr',avatarSeed};
+    const avatarStyle=memberRec?memberRec.avatarStyle:(D.leaderAvatarStyles||{})[loginSelId];
+    currentUser={id:loginSelId,name:document.getElementById('lpinname').textContent,role,roleLabel:document.getElementById('lpinrole').textContent,init:av.init||loginSelId,color:av.color||'gr',avatarSeed,avatarStyle};
     startApp();
   }else{
     const err=document.getElementById('login-err');
@@ -1671,8 +1688,8 @@ function renderOverview(){
   const day=todayName();
   document.getElementById('ov-today').textContent=day;
   const heads=[
-    {id:'HS',name:'Himanshu Sharma',role:'DG Head',init:'HS',color:'gr',avatarSeed:(D.leaderAvatars||{}).HS},
-    {id:'MD',name:'Mack Donald',role:'OG Head',init:'MD',color:'bl',avatarSeed:(D.leaderAvatars||{}).MD},
+    {id:'HS',name:'Himanshu Sharma',role:'DG Head',init:'HS',color:'gr',avatarSeed:(D.leaderAvatars||{}).HS,avatarStyle:(D.leaderAvatarStyles||{}).HS},
+    {id:'MD',name:'Mack Donald',role:'OG Head',init:'MD',color:'bl',avatarSeed:(D.leaderAvatars||{}).MD,avatarStyle:(D.leaderAvatarStyles||{}).MD},
   ];
   let all;
   if(currentUser.role==='manager')all=D.members.filter(m=>m.team!=='og');
@@ -1992,31 +2009,40 @@ function renderManage(){
 
 /* ── avatar editor (Manage → edit anyone's avatar) ── */
 const LEADER_NAMES={HS:'Himanshu Sharma',MD:'Mack Donald',RS:'Ritesh Sethi'};
-let avatarEditTarget=null,avatarEditSeeds=[],avatarEditSelected=null;
+let avatarEditTarget=null,avatarEditSeeds=[],avatarEditSelected=null,avatarEditStyle=DEFAULT_AVATAR_STYLE;
 function getAvatarEditName(key){return LEADER_NAMES[key]||(D.members.find(x=>x.id===key)||{}).name||key;}
 function getAvatarEditCurrentSeed(key){
   if(LEADER_NAMES[key])return(D.leaderAvatars||{})[key]||LEADER_NAMES[key];
   const m=D.members.find(x=>x.id===key);
   return avatarSeedFor(m||{});
 }
+function getAvatarEditCurrentStyle(key){
+  if(LEADER_NAMES[key])return(D.leaderAvatarStyles||{})[key]||DEFAULT_AVATAR_STYLE;
+  const m=D.members.find(x=>x.id===key);
+  return avatarStyleFor(m||{});
+}
 function openAvatarEditor(key){
   avatarEditTarget=(avatarEditTarget===key)?null:key;
   avatarEditSeeds=genAvatarSeeds(11);
   avatarEditSelected=null;
+  avatarEditStyle=getAvatarEditCurrentStyle(key);
   renderManage();
 }
 function closeAvatarEditor(){avatarEditTarget=null;avatarEditSelected=null;renderManage();}
 function shuffleAvatarEditor(){avatarEditSeeds=genAvatarSeeds(11);avatarEditSelected=null;renderManage();}
 function pickAvatarEditor(seed){avatarEditSelected=(avatarEditSelected===seed)?null:seed;renderManage();}
+function pickAvatarEditorStyle(style){avatarEditStyle=style;renderManage();}
 function saveAvatarEditor(){
   if(!avatarEditTarget)return;
   if(!avatarEditSelected){toast('Pick an avatar first','error');return;}
   if(LEADER_NAMES[avatarEditTarget]){
     if(!D.leaderAvatars)D.leaderAvatars={};
     D.leaderAvatars[avatarEditTarget]=avatarEditSelected;
+    if(!D.leaderAvatarStyles)D.leaderAvatarStyles={};
+    D.leaderAvatarStyles[avatarEditTarget]=avatarEditStyle;
   }else{
     const m=D.members.find(x=>x.id===avatarEditTarget);
-    if(m)m.avatarSeed=avatarEditSelected;
+    if(m){m.avatarSeed=avatarEditSelected;m.avatarStyle=avatarEditStyle;}
   }
   avatarEditTarget=null;avatarEditSelected=null;
   save();renderManage();renderTeamPgrid();matGrid_init();showLoginGrid();
@@ -2026,9 +2052,10 @@ function resetAvatarEditor(){
   if(!avatarEditTarget)return;
   if(LEADER_NAMES[avatarEditTarget]){
     if(D.leaderAvatars)delete D.leaderAvatars[avatarEditTarget];
+    if(D.leaderAvatarStyles)delete D.leaderAvatarStyles[avatarEditTarget];
   }else{
     const m=D.members.find(x=>x.id===avatarEditTarget);
-    if(m)delete m.avatarSeed;
+    if(m){delete m.avatarSeed;delete m.avatarStyle;}
   }
   avatarEditTarget=null;avatarEditSelected=null;
   save();renderManage();renderTeamPgrid();matGrid_init();showLoginGrid();
@@ -2039,12 +2066,14 @@ function avatarEditorPanel(key){
   const seeds=avatarEditSeeds.length?avatarEditSeeds:(avatarEditSeeds=genAvatarSeeds(11));
   const options=[current,...seeds.filter(s=>s!==current)];
   const selected=avatarEditSelected||current;
+  const style=avatarEditStyle||DEFAULT_AVATAR_STYLE;
   return`<div class="card" style="border-color:var(--gr2);margin-top:-2px">
     <div class="row" style="justify-content:space-between;margin-bottom:10px;flex-wrap:wrap">
       <div class="flbl" style="margin-bottom:0">Choose a new avatar for ${getAvatarEditName(key)}</div>
       <button class="btn btn-ghost" type="button" style="font-size:11px;padding:5px 10px" onclick="shuffleAvatarEditor()"><i class="ti ti-refresh" style="font-size:11px"></i> Shuffle</button>
     </div>
-    <div class="av-picker-grid">${options.map(seed=>`<button type="button" class="av-option${selected===seed?' sel':''}" onclick="pickAvatarEditor('${seed}')" title="Pick avatar"><img src="${avatarUrl(seed)}" alt=""></button>`).join('')}</div>
+    <div class="row" style="gap:6px;margin-bottom:10px;flex-wrap:wrap">${AVATAR_STYLES.map(s=>`<button type="button" class="btn ${s.id===style?'btn-gr':'btn-ghost'}" style="font-size:11px;padding:5px 10px" onclick="pickAvatarEditorStyle('${s.id}')">${s.label}</button>`).join('')}</div>
+    <div class="av-picker-grid">${options.map(seed=>`<button type="button" class="av-option${selected===seed?' sel':''}" onclick="pickAvatarEditor('${seed}')" title="Pick avatar"><img src="${avatarUrl(seed,style)}" alt=""></button>`).join('')}</div>
     <div class="row" style="gap:8px;margin-top:12px;flex-wrap:wrap">
       <button class="btn btn-gr" onclick="saveAvatarEditor()"><i class="ti ti-check"></i> Save avatar</button>
       <button class="btn btn-ghost" onclick="resetAvatarEditor()"><i class="ti ti-refresh" style="font-size:12px"></i> Use name as default</button>
@@ -2060,7 +2089,7 @@ function renderLeaderAvatars(){
     return`<div>
       <div class="card row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div class="row" style="gap:10px">
-          <div class="av" style="width:36px;height:36px;background:var(--bg4);font-size:12px">${avatarImg({name:LEADER_NAMES[key],avatarSeed:(D.leaderAvatars||{})[key]})}</div>
+          <div class="av" style="width:36px;height:36px;background:var(--bg4);font-size:12px">${avatarImg({name:LEADER_NAMES[key],avatarSeed:(D.leaderAvatars||{})[key],avatarStyle:(D.leaderAvatarStyles||{})[key]})}</div>
           <div style="font-size:14.5px;font-weight:700;color:var(--t1)">${LEADER_NAMES[key]}</div>
         </div>
         <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="openAvatarEditor('${key}')"><i class="ti ti-edit" style="font-size:12px"></i> Avatar</button>
@@ -2071,13 +2100,18 @@ function renderLeaderAvatars(){
 }
 
 /* ── avatar picker (Manage → Add member) ── */
-let AV_PICKER_SEEDS=[];
+let AV_PICKER_SEEDS=[],newMemberAvatarStyle=DEFAULT_AVATAR_STYLE;
 function genAvatarSeeds(n){const a=[];for(let i=0;i<n;i++)a.push('av_'+Math.random().toString(36).slice(2,10));return a;}
 function shuffleAvatarPicker(){AV_PICKER_SEEDS=genAvatarSeeds(12);newMemberAvatarSeed=null;renderAvatarPicker();}
+function pickMemberAvatarStyle(style){newMemberAvatarStyle=style;renderAvatarPicker();}
+function renderAvatarPickerStyleTabs(){
+  return`<div class="row" style="gap:6px;margin-bottom:10px;flex-wrap:wrap">${AVATAR_STYLES.map(s=>`<button type="button" class="btn ${s.id===newMemberAvatarStyle?'btn-gr':'btn-ghost'}" style="font-size:11px;padding:5px 10px" onclick="pickMemberAvatarStyle('${s.id}')">${s.label}</button>`).join('')}</div>`;
+}
 function renderAvatarPicker(){
   const el=document.getElementById('avatar-picker');if(!el)return;
   if(!AV_PICKER_SEEDS.length)AV_PICKER_SEEDS=genAvatarSeeds(12);
-  el.innerHTML=AV_PICKER_SEEDS.map(seed=>`<button type="button" class="av-option${newMemberAvatarSeed===seed?' sel':''}" onclick="pickMemberAvatar('${seed}')" title="Pick avatar"><img src="${avatarUrl(seed)}" alt=""></button>`).join('');
+  const tabsEl=document.getElementById('avatar-picker-styles');if(tabsEl)tabsEl.innerHTML=renderAvatarPickerStyleTabs();
+  el.innerHTML=AV_PICKER_SEEDS.map(seed=>`<button type="button" class="av-option${newMemberAvatarSeed===seed?' sel':''}" onclick="pickMemberAvatar('${seed}')" title="Pick avatar"><img src="${avatarUrl(seed,newMemberAvatarStyle)}" alt=""></button>`).join('');
 }
 function pickMemberAvatar(seed){newMemberAvatarSeed=(newMemberAvatarSeed===seed)?null:seed;renderAvatarPicker();}
 function moveTeam(i,newTeam){
@@ -2096,12 +2130,12 @@ function addMember(){
   if(!name||!init)return;
   const id=init+'_'+Date.now();
   const member={id,name,role,init,color,team};
-  if(newMemberAvatarSeed)member.avatarSeed=newMemberAvatarSeed;
+  if(newMemberAvatarSeed){member.avatarSeed=newMemberAvatarSeed;member.avatarStyle=newMemberAvatarStyle;}
   D.members.push(member);
   D.tasks[id]=JSON.parse(JSON.stringify(D.tasks.AS||{}));
   if(!D.memberPins)D.memberPins={};D.memberPins[id]='0000';
   ['add-name','add-init'].forEach(x=>document.getElementById(x).value='');
-  newMemberAvatarSeed=null;AV_PICKER_SEEDS=genAvatarSeeds(12);
+  newMemberAvatarSeed=null;newMemberAvatarStyle=DEFAULT_AVATAR_STYLE;AV_PICKER_SEEDS=genAvatarSeeds(12);
   save();renderManage();renderTeamPgrid();matGrid_init();
 }
 function removeMember(i){
@@ -2173,7 +2207,7 @@ function matGrid_init(){
 
 function matGrid_getMentorGroups(){
   const result=[];
-  const himanshu={id:'HS',name:'Himanshu Sharma',isExtra:false,color:'gr',init:'HS',avatarSeed:(D.leaderAvatars||{}).HS};
+  const himanshu={id:'HS',name:'Himanshu Sharma',isExtra:false,color:'gr',init:'HS',avatarSeed:(D.leaderAvatars||{}).HS,avatarStyle:(D.leaderAvatarStyles||{}).HS};
   if(!MAT_GRID.hidden.includes('HS'))result.push(himanshu);
   D.members.filter(m=>m.team!=='og').forEach(m=>{
     if(!MAT_GRID.hidden.includes(m.id))
