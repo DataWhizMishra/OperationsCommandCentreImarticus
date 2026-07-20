@@ -427,6 +427,8 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 .mom-meta{font-size:12px;color:var(--t3);margin-bottom:10px}
 .mom-section{font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px;margin-top:10px}
 .mom-item{font-size:14px;color:var(--t2);padding:3px 0;line-height:1.6}
+.mom-cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:640px){#view-mom .mom-cols{grid-template-columns:1fr;gap:4px}}
 
 /* MISC */
 .row{display:flex;align-items:center;gap:8px}
@@ -1027,8 +1029,21 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 <!-- NOTES -->
 <div id="view-notes" class="view">
   <div class="add-form">
-    <div class="add-form-title">Quick note</div>
-    <textarea class="ta" id="note-txt" placeholder="Type your note here…" style="min-height:60px"></textarea>
+    <div class="add-form-title">Quick note <span style="font-weight:400;color:var(--t3);font-size:11px">— private to you only</span></div>
+    <div class="row" style="gap:6px;margin-bottom:10px">
+      <button class="dbtn active" id="ntype-paragraph" type="button" onclick="setNoteType('paragraph')">Paragraph</button>
+      <button class="dbtn" id="ntype-checklist" type="button" onclick="setNoteType('checklist')">Checklist</button>
+    </div>
+    <div id="note-para-wrap">
+      <textarea class="ta" id="note-txt" placeholder="Type your note here…" style="min-height:60px"></textarea>
+    </div>
+    <div id="note-cl-wrap" style="display:none">
+      <div class="row" style="gap:6px">
+        <input class="inp" id="note-item-inp" placeholder="Add a bullet…" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addNoteDraftItem();}">
+        <button class="btn btn-ghost" type="button" onclick="addNoteDraftItem()"><i class="ti ti-plus"></i></button>
+      </div>
+      <div id="note-draft-list" style="margin-top:6px"></div>
+    </div>
     <div class="row" style="margin-top:8px;gap:6px;flex-wrap:wrap">
       <input class="inp" id="note-tag" placeholder="Tag (optional)" style="max-width:140px">
       <button class="btn btn-gr" onclick="addNote()" style="margin-left:auto"><i class="ti ti-plus"></i> Save note</button>
@@ -1047,16 +1062,28 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 <!-- MOM -->
 <div id="view-mom" class="view">
   <div class="add-form">
-    <div class="add-form-title">Create MOM</div>
+    <div class="add-form-title">Create MOM <span style="font-weight:400;color:var(--t3);font-size:11px">— visible only to your team</span></div>
     <div class="fgrid">
-      <div><div class="flbl">Meeting name</div><input class="inp" id="mom-title" placeholder="e.g. Monday huddle"></div>
-      <div><div class="flbl">Date</div><input class="inp" id="mom-date" type="date"></div>
+      <div><div class="flbl">Meeting topic</div><input class="inp" id="mom-title" placeholder="e.g. Monday huddle"></div>
+      <div><div class="flbl">Meeting date</div><input class="inp" id="mom-date" type="date"></div>
     </div>
-    <div style="margin-bottom:8px"><div class="flbl">Attendees</div><input class="inp" id="mom-att" placeholder="Who attended…"></div>
-    <div style="margin-bottom:8px"><div class="flbl">Discussion points</div><textarea class="ta" id="mom-disc" placeholder="What was discussed…"></textarea></div>
-    <div style="margin-bottom:8px"><div class="flbl">Decisions taken</div><textarea class="ta" id="mom-dec" placeholder="What was decided…"></textarea></div>
-    <div style="margin-bottom:8px"><div class="flbl">Action items</div><textarea class="ta" id="mom-act" placeholder="Who does what by when…"></textarea></div>
-    <div style="margin-bottom:8px"><div class="flbl">Next meeting</div><input class="inp" id="mom-next" placeholder="Date and agenda…"></div>
+    <div style="margin-bottom:12px">
+      <div class="flbl">Discussed pointers</div>
+      <div class="row" style="gap:6px">
+        <input class="inp" id="mom-disc-inp" placeholder="Add a discussion point…" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();momDraftAdd('disc');}">
+        <button class="btn btn-ghost" type="button" onclick="momDraftAdd('disc')"><i class="ti ti-plus"></i></button>
+      </div>
+      <div id="mom-disc-list" style="margin-top:6px"></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="flbl">Actionable pointers</div>
+      <div class="row" style="gap:6px">
+        <input class="inp" id="mom-act-inp" placeholder="Add an action item…" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();momDraftAdd('act');}">
+        <button class="btn btn-ghost" type="button" onclick="momDraftAdd('act')"><i class="ti ti-plus"></i></button>
+      </div>
+      <div id="mom-act-list" style="margin-top:6px"></div>
+    </div>
+    <div style="margin-bottom:8px"><div class="flbl">Notes</div><textarea class="ta" id="mom-notes" placeholder="Any additional lines…" style="min-height:50px"></textarea></div>
     <button class="btn btn-gr" onclick="saveMOM()" style="margin-top:4px;width:100%"><i class="ti ti-file-text"></i> Save MOM</button>
   </div>
   <div class="sec">Saved MOMs</div>
@@ -1225,6 +1252,7 @@ const TABS_OG=[
   {id:'team',icon:'ti-users',label:'Team'},
   {id:'mywork',icon:'ti-user',label:'My Tasks'},
   {id:'notes',icon:'ti-notebook',label:'Notes'},
+  {id:'mom',icon:'ti-file-text',label:'MOM'},
 ];
 const TABS_MEM=[
   {id:'mywork',icon:'ti-checkbox',label:'My Work'},
@@ -1347,6 +1375,7 @@ function animCount(el,target,suffix=''){
 }
 
 /* ── DATA ── */
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 function defLoad(){
   return{
     members:[
@@ -1446,6 +1475,48 @@ function initMissing(){
   if(!D.faculty.masterclass)D.faculty.masterclass=[];
   if(!D.faculty.extra)D.faculty.extra=[];
   if(!D.leaderAvatars)D.leaderAvatars={};
+  if(!D.notes)D.notes=[];
+  D.notes.forEach(n=>{
+    if(!n.id)n.id=uid();
+    if(!n.type)n.type='paragraph';
+    if(!Array.isArray(n.items))n.items=[];
+  });
+  if(!D.moms)D.moms=[];
+  D.moms.forEach(m=>{
+    if(!m.id)m.id=uid();
+    if(!m.topic){
+      m.topic=m.t||'(untitled)';
+      m.date=m.dt||'';
+      m.discussed=(m.disc||'').split('\n').map(s=>s.trim()).filter(Boolean).map(txt=>({txt}));
+      m.actions=(m.act||'').split('\n').map(s=>s.trim()).filter(Boolean).map(txt=>({txt,done:false}));
+      const extra=[];
+      if(m.att)extra.push('Attendees: '+m.att);
+      if(m.dec)extra.push('Decisions: '+m.dec);
+      if(m.next)extra.push('Next meeting: '+m.next);
+      m.notes=extra.join('\n');
+    }
+    if(!Array.isArray(m.discussed))m.discussed=[];
+    if(!Array.isArray(m.actions))m.actions=[];
+    if(typeof m.notes!=='string')m.notes='';
+    if(!m.team)m.team='dg';
+  });
+}
+/* ── notes/MOM scoping ── */
+function myNotes(){
+  if(!currentUser)return[];
+  return D.notes.filter(n=>n.ownerId?n.ownerId===currentUser.id:n.author===currentUser.name);
+}
+function momTeamOf(){
+  if(!currentUser)return'dg';
+  if(currentUser.role==='ritesh')return'ritesh';
+  if(currentUser.role==='manager')return'dg';
+  if(currentUser.role==='ogmanager')return'og';
+  const mem=D.members.find(m=>m.id===currentUser.id);
+  return mem&&mem.team==='og'?'og':'dg';
+}
+function visibleMOMs(){
+  const my=momTeamOf();
+  return D.moms.filter(m=>m.team===my);
 }
 
 /* ── login ── */
@@ -1867,25 +1938,142 @@ function delTask(pid,day,i,el,lbl,bar){
 }
 
 /* ── notes ── */
+let noteType='paragraph';
+let noteDraftItems=[];
+let editingNoteId=null;
+let editDraftItems=[];
+function esc(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(s){return esc(s).replace(/"/g,'&quot;');}
+function setNoteType(t){
+  noteType=t;
+  document.getElementById('ntype-paragraph').classList.toggle('active',t==='paragraph');
+  document.getElementById('ntype-checklist').classList.toggle('active',t==='checklist');
+  document.getElementById('note-para-wrap').style.display=t==='paragraph'?'block':'none';
+  document.getElementById('note-cl-wrap').style.display=t==='checklist'?'block':'none';
+}
+function addNoteDraftItem(){
+  const inp=document.getElementById('note-item-inp');
+  const t=inp.value.trim();if(!t)return;
+  noteDraftItems.push(t);inp.value='';inp.focus();
+  renderNoteDraftList();
+}
+function delNoteDraftItem(i){noteDraftItems.splice(i,1);renderNoteDraftList();}
+function renderNoteDraftList(){
+  const el=document.getElementById('note-draft-list');
+  el.innerHTML=noteDraftItems.map((t,i)=>`<div class="task-row" style="cursor:default">
+    <span class="task-txt">${esc(t)}</span>
+    <div class="task-acts" style="opacity:1"><button class="ibtn del" onclick="delNoteDraftItem(${i})"><i class="ti ti-trash" style="font-size:11px"></i></button></div>
+  </div>`).join('');
+}
 function addNote(){
-  const txt=document.getElementById('note-txt').value.trim();if(!txt)return;
+  if(!currentUser)return;
   const tag=document.getElementById('note-tag').value.trim();
-  D.notes.unshift({txt,tag,author:currentUser?.name||'',ts:new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})});
-  document.getElementById('note-txt').value='';document.getElementById('note-tag').value='';
+  const ts=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const base={id:uid(),type:noteType,tag,ownerId:currentUser.id,author:currentUser.name||'',ts};
+  if(noteType==='checklist'){
+    if(!noteDraftItems.length)return;
+    D.notes.unshift({...base,txt:'',items:noteDraftItems.map(t=>({txt:t,done:false}))});
+    noteDraftItems=[];renderNoteDraftList();
+  }else{
+    const txt=document.getElementById('note-txt').value.trim();if(!txt)return;
+    D.notes.unshift({...base,txt,items:[]});
+    document.getElementById('note-txt').value='';
+  }
+  document.getElementById('note-tag').value='';
   save();renderNotes();
 }
-function delNote(i){D.notes.splice(i,1);save();renderNotes();}
+function delNote(id){D.notes=D.notes.filter(n=>n.id!==id);if(editingNoteId===id)editingNoteId=null;save();renderNotes();}
+function toggleNoteItem(id,idx){
+  const n=D.notes.find(x=>x.id===id);if(!n||!n.items[idx])return;
+  n.items[idx].done=!n.items[idx].done;save();renderNotes();
+}
+function editNote(id){
+  const n=D.notes.find(x=>x.id===id);if(!n)return;
+  editingNoteId=id;
+  editDraftItems=n.type==='checklist'?n.items.map(it=>({txt:it.txt,done:it.done})):[];
+  renderNotes();
+}
+function cancelNoteEdit(){editingNoteId=null;editDraftItems=[];renderNotes();}
+function syncNoteEditDraftFromDOM(id){
+  const rows=document.querySelectorAll('#note-edit-items-'+id+' .note-edit-item-txt');
+  rows.forEach((inp,i)=>{if(editDraftItems[i])editDraftItems[i].txt=inp.value;});
+}
+function noteEditAddRow(id){
+  syncNoteEditDraftFromDOM(id);
+  editDraftItems.push({txt:'',done:false});
+  renderNotes();
+  setTimeout(()=>{const rows=document.querySelectorAll('#note-edit-items-'+id+' .note-edit-item-txt');rows[rows.length-1]?.focus();},0);
+}
+function noteEditDelRow(id,i){
+  syncNoteEditDraftFromDOM(id);
+  editDraftItems.splice(i,1);
+  renderNotes();
+}
+function saveNoteEdit(id){
+  const n=D.notes.find(x=>x.id===id);if(!n)return;
+  const tagEl=document.getElementById('note-edit-tag-'+id);
+  if(tagEl)n.tag=tagEl.value.trim();
+  if(n.type==='checklist'){
+    syncNoteEditDraftFromDOM(id);
+    n.items=editDraftItems.map(it=>({txt:it.txt.trim(),done:!!it.done})).filter(it=>it.txt);
+  }else{
+    const ta=document.getElementById('note-edit-txt-'+id);
+    if(ta)n.txt=ta.value.trim();
+  }
+  n.updatedTs=new Date().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  editingNoteId=null;editDraftItems=[];
+  save();renderNotes();
+}
+function renderNoteEditCard(n){
+  const tagHtml=`<input class="inp" id="note-edit-tag-${n.id}" value="${escAttr(n.tag)}" placeholder="Tag (optional)" style="max-width:160px">`;
+  let bodyHtml;
+  if(n.type==='checklist'){
+    bodyHtml=`<div id="note-edit-items-${n.id}">${editDraftItems.map((it,i)=>`
+      <div class="row" style="gap:6px;margin-bottom:6px">
+        <input class="inp note-edit-item-txt" value="${escAttr(it.txt)}" style="flex:1">
+        <button class="ibtn del" onclick="noteEditDelRow('${n.id}',${i})"><i class="ti ti-trash" style="font-size:11px"></i></button>
+      </div>`).join('')}</div>
+      <button class="btn btn-ghost" type="button" onclick="noteEditAddRow('${n.id}')" style="margin-bottom:4px"><i class="ti ti-plus"></i> Add bullet</button>`;
+  }else{
+    bodyHtml=`<textarea class="ta" id="note-edit-txt-${n.id}" style="min-height:70px">${esc(n.txt)}</textarea>`;
+  }
+  return`<div class="note-card">
+    <div class="row" style="margin-bottom:8px;justify-content:space-between">${tagHtml}</div>
+    ${bodyHtml}
+    <div class="row" style="margin-top:10px;gap:6px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="cancelNoteEdit()">Cancel</button>
+      <button class="btn btn-gr" onclick="saveNoteEdit('${n.id}')"><i class="ti ti-check"></i> Save</button>
+    </div>
+  </div>`;
+}
 function renderNotes(){
   const el=document.getElementById('notes-list');
-  if(!D.notes.length){el.innerHTML=`<div class="empty"><i class="ti ti-notebook"></i>No notes yet.</div>`;return;}
-  el.innerHTML=D.notes.map((n,i)=>`<div class="note-card">
-    <div class="row" style="margin-bottom:6px;justify-content:space-between">
-      <div class="row" style="gap:6px">${n.tag?`<span class="ftag f-w">${n.tag}</span>`:''} ${n.author?`<span style="font-size:10px;color:var(--t3)">${n.author}</span>`:''}</div>
-      <button class="ibtn del" onclick="delNote(${i})"><i class="ti ti-trash" style="font-size:11px"></i></button>
-    </div>
-    <div class="note-txt">${n.txt.replace(/\n/g,'<br>')}</div>
-    <div class="note-meta">${n.ts}</div>
-  </div>`).join('');
+  const list=myNotes();
+  if(!list.length){el.innerHTML=`<div class="empty"><i class="ti ti-notebook"></i>No notes yet.</div>`;return;}
+  el.innerHTML=list.map(n=>{
+    if(editingNoteId===n.id)return renderNoteEditCard(n);
+    const tagHtml=n.tag?`<span class="ftag f-w">${esc(n.tag)}</span>`:'';
+    let bodyHtml;
+    if(n.type==='checklist'){
+      bodyHtml=(n.items||[]).length?(n.items.map((it,i)=>`<div class="task-row${it.done?' done':''}" onclick="toggleNoteItem('${n.id}',${i})">
+        <input type="checkbox"${it.done?' checked':''} onclick="event.stopPropagation();toggleNoteItem('${n.id}',${i})">
+        <span class="task-txt">${esc(it.txt)}</span>
+      </div>`).join('')):`<div class="empty" style="padding:1rem 0"><i class="ti ti-list-check"></i>No items.</div>`;
+    }else{
+      bodyHtml=`<div class="note-txt">${esc(n.txt).replace(/\n/g,'<br>')}</div>`;
+    }
+    return`<div class="note-card">
+      <div class="row" style="margin-bottom:6px;justify-content:space-between">
+        <div class="row" style="gap:6px">${tagHtml}</div>
+        <div class="row" style="gap:4px">
+          <button class="ibtn" onclick="editNote('${n.id}')"><i class="ti ti-pencil" style="font-size:11px"></i></button>
+          <button class="ibtn del" onclick="delNote('${n.id}')"><i class="ti ti-trash" style="font-size:11px"></i></button>
+        </div>
+      </div>
+      ${bodyHtml}
+      <div class="note-meta">${n.ts}${n.updatedTs?' · edited '+n.updatedTs:''}</div>
+    </div>`;
+  }).join('');
 }
 
 /* ── meetings ── */
@@ -1940,35 +2128,155 @@ function renderMtgs(){
   }).join('');
 }
 /* ── MOMs ── */
+let momDraft={disc:[],act:[]};
+let editingMomId=null;
+let momEditDraft={discussed:[],actions:[]};
+function momDraftAdd(kind){
+  const inp=document.getElementById('mom-'+kind+'-inp');
+  const t=inp.value.trim();if(!t)return;
+  momDraft[kind].push(t);inp.value='';inp.focus();
+  renderMomDraftList(kind);
+}
+function momDraftDel(kind,i){momDraft[kind].splice(i,1);renderMomDraftList(kind);}
+function renderMomDraftList(kind){
+  const el=document.getElementById('mom-'+kind+'-list');
+  el.innerHTML=momDraft[kind].map((t,i)=>`<div class="task-row" style="cursor:default">
+    <span class="task-txt">${esc(t)}</span>
+    <div class="task-acts" style="opacity:1"><button class="ibtn del" onclick="momDraftDel('${kind}',${i})"><i class="ti ti-trash" style="font-size:11px"></i></button></div>
+  </div>`).join('');
+}
 function saveMOM(){
+  if(!currentUser)return;
   const t=document.getElementById('mom-title').value.trim();if(!t)return;
-  D.moms.unshift({t,dt:document.getElementById('mom-date').value,att:document.getElementById('mom-att').value,disc:document.getElementById('mom-disc').value,dec:document.getElementById('mom-dec').value,act:document.getElementById('mom-act').value,next:document.getElementById('mom-next').value,ts:new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})});
-  ['mom-title','mom-att','mom-disc','mom-dec','mom-act','mom-next'].forEach(id=>document.getElementById(id).value='');
+  D.moms.unshift({
+    id:uid(),
+    topic:t,
+    date:document.getElementById('mom-date').value,
+    discussed:momDraft.disc.map(txt=>({txt})),
+    actions:momDraft.act.map(txt=>({txt,done:false})),
+    notes:document.getElementById('mom-notes').value.trim(),
+    createdBy:{id:currentUser.id,name:currentUser.name},
+    team:momTeamOf(),
+    ts:new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}),
+  });
+  document.getElementById('mom-title').value='';
+  document.getElementById('mom-notes').value='';
+  momDraft={disc:[],act:[]};
+  renderMomDraftList('disc');renderMomDraftList('act');
   save();renderMOMs();
 }
-function delMOM(i){D.moms.splice(i,1);save();renderMOMs();}
-function copyMOM(i){
-  const m=D.moms[i];
-  navigator.clipboard.writeText(`MOM — ${m.t}\nDate: ${m.dt||'N/A'}\nAttendees: ${m.att||'N/A'}\n\nDiscussion:\n${m.disc||'-'}\n\nDecisions:\n${m.dec||'-'}\n\nAction items:\n${m.act||'-'}\n\nNext meeting: ${m.next||'-'}`).catch(()=>{});
+function delMOM(id){D.moms=D.moms.filter(m=>m.id!==id);if(editingMomId===id)editingMomId=null;save();renderMOMs();}
+function toggleMOMAction(id,idx){
+  const m=D.moms.find(x=>x.id===id);if(!m||!m.actions[idx])return;
+  m.actions[idx].done=!m.actions[idx].done;save();renderMOMs();
+}
+function copyMOM(id){
+  const m=D.moms.find(x=>x.id===id);if(!m)return;
+  const disc=(m.discussed||[]).map(d=>'- '+d.txt).join('\n')||'-';
+  const act=(m.actions||[]).map(a=>`- [${a.done?'x':' '}] `+a.txt).join('\n')||'-';
+  navigator.clipboard.writeText(`MOM — ${m.topic}\nDate: ${m.date||'N/A'}\n\nDiscussed pointers:\n${disc}\n\nActionable pointers:\n${act}${m.notes?`\n\nNotes:\n${m.notes}`:''}`).catch(()=>{});
   toast('MOM copied to clipboard','info');
+}
+function editMOM(id){
+  const m=D.moms.find(x=>x.id===id);if(!m)return;
+  editingMomId=id;
+  momEditDraft={discussed:(m.discussed||[]).map(d=>d.txt),actions:(m.actions||[]).map(a=>({txt:a.txt,done:a.done}))};
+  renderMOMs();
+}
+function cancelMOMEdit(){editingMomId=null;renderMOMs();}
+function momEditSyncFromDOM(id){
+  const discEl=document.querySelectorAll('#mom-edit-disc-'+id+' .mom-edit-item-txt');
+  discEl.forEach((inp,i)=>{if(momEditDraft.discussed[i]!==undefined)momEditDraft.discussed[i]=inp.value;});
+  const actEl=document.querySelectorAll('#mom-edit-act-'+id+' .mom-edit-item-txt');
+  actEl.forEach((inp,i)=>{if(momEditDraft.actions[i])momEditDraft.actions[i].txt=inp.value;});
+}
+function momEditAddRow(id,kind){
+  momEditSyncFromDOM(id);
+  if(kind==='discussed')momEditDraft.discussed.push('');
+  else momEditDraft.actions.push({txt:'',done:false});
+  renderMOMs();
+}
+function momEditDelRow(id,kind,i){
+  momEditSyncFromDOM(id);
+  momEditDraft[kind].splice(i,1);
+  renderMOMs();
+}
+function saveMOMEdit(id){
+  const m=D.moms.find(x=>x.id===id);if(!m)return;
+  momEditSyncFromDOM(id);
+  const topicEl=document.getElementById('mom-edit-title-'+id);
+  const dateEl=document.getElementById('mom-edit-date-'+id);
+  const notesEl=document.getElementById('mom-edit-notes-'+id);
+  if(topicEl)m.topic=topicEl.value.trim()||m.topic;
+  if(dateEl)m.date=dateEl.value;
+  if(notesEl)m.notes=notesEl.value.trim();
+  m.discussed=momEditDraft.discussed.map(txt=>txt.trim()).filter(Boolean).map(txt=>({txt}));
+  m.actions=momEditDraft.actions.map(a=>({txt:a.txt.trim(),done:!!a.done})).filter(a=>a.txt);
+  m.updatedTs=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  editingMomId=null;
+  save();renderMOMs();
+}
+function renderMOMEditCard(m){
+  const discRows=momEditDraft.discussed.map((txt,i)=>`<div class="row" style="gap:6px;margin-bottom:6px">
+    <input class="inp mom-edit-item-txt" value="${escAttr(txt)}" style="flex:1">
+    <button class="ibtn del" onclick="momEditDelRow('${m.id}','discussed',${i})"><i class="ti ti-trash" style="font-size:11px"></i></button>
+  </div>`).join('');
+  const actRows=momEditDraft.actions.map((a,i)=>`<div class="row" style="gap:6px;margin-bottom:6px">
+    <input class="inp mom-edit-item-txt" value="${escAttr(a.txt)}" style="flex:1">
+    <button class="ibtn del" onclick="momEditDelRow('${m.id}','actions',${i})"><i class="ti ti-trash" style="font-size:11px"></i></button>
+  </div>`).join('');
+  return`<div class="mom-card">
+    <div class="fgrid" style="margin-bottom:10px">
+      <div><div class="flbl">Meeting topic</div><input class="inp" id="mom-edit-title-${m.id}" value="${escAttr(m.topic)}"></div>
+      <div><div class="flbl">Meeting date</div><input class="inp" id="mom-edit-date-${m.id}" type="date" value="${escAttr(m.date)}"></div>
+    </div>
+    <div class="mom-cols">
+      <div>
+        <div class="mom-section">Discussed pointers</div>
+        <div id="mom-edit-disc-${m.id}">${discRows}</div>
+        <button class="btn btn-ghost" type="button" onclick="momEditAddRow('${m.id}','discussed')"><i class="ti ti-plus"></i> Add</button>
+      </div>
+      <div>
+        <div class="mom-section">Actionable pointers</div>
+        <div id="mom-edit-act-${m.id}">${actRows}</div>
+        <button class="btn btn-ghost" type="button" onclick="momEditAddRow('${m.id}','actions')"><i class="ti ti-plus"></i> Add</button>
+      </div>
+    </div>
+    <div style="margin-top:10px"><div class="flbl">Notes</div><textarea class="ta" id="mom-edit-notes-${m.id}" style="min-height:50px">${esc(m.notes)}</textarea></div>
+    <div class="row" style="margin-top:10px;gap:6px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="cancelMOMEdit()">Cancel</button>
+      <button class="btn btn-gr" onclick="saveMOMEdit('${m.id}')"><i class="ti ti-check"></i> Save</button>
+    </div>
+  </div>`;
 }
 function renderMOMs(){
   const el=document.getElementById('mom-list');
-  if(!D.moms.length){el.innerHTML=`<div class="empty"><i class="ti ti-file-off"></i>No MOMs saved.</div>`;return;}
-  el.innerHTML=D.moms.map((m,i)=>`<div class="mom-card">
-    <div class="row" style="justify-content:space-between;margin-bottom:2px">
-      <div class="mom-title">${m.t}</div>
-      <div class="row" style="gap:4px">
-        <button class="ibtn" onclick="copyMOM(${i})"><i class="ti ti-copy" style="font-size:11px"></i></button>
-        <button class="ibtn del" onclick="delMOM(${i})"><i class="ti ti-trash" style="font-size:11px"></i></button>
+  const list=visibleMOMs();
+  if(!list.length){el.innerHTML=`<div class="empty"><i class="ti ti-file-off"></i>No MOMs saved.</div>`;return;}
+  el.innerHTML=list.map(m=>{
+    if(editingMomId===m.id)return renderMOMEditCard(m);
+    const discHtml=(m.discussed||[]).length?(m.discussed.map(d=>`<div class="mom-item"><span style="color:var(--t3);margin-right:6px">•</span>${esc(d.txt)}</div>`).join('')):`<div class="empty" style="padding:.75rem 0"><i class="ti ti-message-off"></i>Nothing logged.</div>`;
+    const actHtml=(m.actions||[]).length?(m.actions.map((a,i)=>`<div class="task-row${a.done?' done':''}" onclick="toggleMOMAction('${m.id}',${i})">
+      <input type="checkbox"${a.done?' checked':''} onclick="event.stopPropagation();toggleMOMAction('${m.id}',${i})">
+      <span class="task-txt">${esc(a.txt)}</span>
+    </div>`).join('')):`<div class="empty" style="padding:.75rem 0"><i class="ti ti-checkbox"></i>No action items.</div>`;
+    return`<div class="mom-card">
+      <div class="row" style="justify-content:space-between;margin-bottom:2px">
+        <div class="mom-title">${esc(m.topic)}</div>
+        <div class="row" style="gap:4px">
+          <button class="ibtn" onclick="editMOM('${m.id}')"><i class="ti ti-pencil" style="font-size:11px"></i></button>
+          <button class="ibtn" onclick="copyMOM('${m.id}')"><i class="ti ti-copy" style="font-size:11px"></i></button>
+          <button class="ibtn del" onclick="delMOM('${m.id}')"><i class="ti ti-trash" style="font-size:11px"></i></button>
+        </div>
       </div>
-    </div>
-    <div class="mom-meta">${m.dt||''} ${m.att?'· Attendees: '+m.att:''} ${m.ts?'· '+m.ts:''}</div>
-    ${m.disc?`<div class="mom-section">Discussion</div><div class="mom-item">${m.disc.replace(/\n/g,'<br>')}</div>`:''}
-    ${m.dec?`<div class="mom-section">Decisions</div><div class="mom-item">${m.dec.replace(/\n/g,'<br>')}</div>`:''}
-    ${m.act?`<div class="mom-section">Action items</div><div class="mom-item">${m.act.replace(/\n/g,'<br>')}</div>`:''}
-    ${m.next?`<div class="mom-section">Next meeting</div><div class="mom-item">${m.next}</div>`:''}
-  </div>`).join('');
+      <div class="mom-meta">${esc(m.date)||'No date'} ${m.createdBy?.name?'· '+esc(m.createdBy.name):''} ${m.ts?'· '+m.ts:''}${m.updatedTs?' · edited '+m.updatedTs:''}</div>
+      <div class="mom-cols">
+        <div><div class="mom-section">Discussed pointers</div>${discHtml}</div>
+        <div><div class="mom-section">Actionable pointers</div>${actHtml}</div>
+      </div>
+      ${m.notes?`<div class="mom-section">Notes</div><div class="mom-item">${esc(m.notes).replace(/\n/g,'<br>')}</div>`:''}
+    </div>`;
+  }).join('');
 }
 
 /* ── manage ── */
