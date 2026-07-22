@@ -1177,10 +1177,11 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
   <div class="mt-stats" id="mat-stats"></div>
   <!-- Manager controls -->
   <div id="mat-mgr-controls" class="mat-grid-controls" style="display:none">
+    <button class="btn btn-rd" onclick="matGrid_resetAll()"><i class="ti ti-refresh" style="font-size:12px"></i> Reset selections</button>
     <input class="inp" id="mat-add-name" placeholder="Add mentor name…" style="max-width:200px;flex-shrink:0" onkeydown="if(event.key==='Enter')matGrid_addMentor()">
     <button class="btn btn-gr" onclick="matGrid_addMentor()"><i class="ti ti-plus" style="font-size:12px"></i> Add Mentor</button>
     <button class="btn btn-ghost" id="mat-restore-btn" onclick="matGrid_restoreHidden()" style="display:none;font-size:11px"><i class="ti ti-eye" style="font-size:11px"></i> Restore hidden</button>
-    <span style="font-size:11px;color:var(--t3)">Team members from Manage tab sync automatically</span>
+    <span style="font-size:11px;color:var(--t3)">Batches sync automatically from each mentor's "Batches managing" list on the Manage tab</span>
   </div>
   <!-- Batch groups, one section per mentor -->
   <div class="mat-groups" id="mat-grid-groups"></div>
@@ -2993,7 +2994,34 @@ function matGrid_init(){
   if(!MAT_GRID.collapsed)MAT_GRID.collapsed=[];
   if(!MAT_GRID.batches)matGrid_migrateBatches();
   D.matGrid=MAT_GRID;
+  matGrid_syncFromCanonical();
   matGrid_render();
+}
+function matGrid_syncFromCanonical(){
+  let changed=false;
+  const sources=[
+    ...D.members.filter(m=>m.team!=='og').map(m=>({id:m.id,batches:m.batches||[]})),
+    {id:'HS',batches:(D.headBatches||{}).HS||[]},
+  ];
+  sources.forEach(src=>{
+    if(!MAT_GRID.batches[src.id])MAT_GRID.batches[src.id]=[];
+    const existingNames=new Set(MAT_GRID.batches[src.id].map(b=>b.name));
+    src.batches.forEach(name=>{
+      if(!existingNames.has(name)){
+        MAT_GRID.batches[src.id].push({id:src.id+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),name});
+        existingNames.add(name);
+        changed=true;
+      }
+    });
+  });
+  if(changed)matGrid_save();
+}
+function matGrid_resetAll(){
+  if(!confirm('Reset every batch\'s Pre Read / Post Read / PPT selection back to "Not Sent"? This cannot be undone.'))return;
+  MAT_GRID.statuses={};
+  matGrid_save();
+  matGrid_render();
+  toast('All selections reset','success');
 }
 
 function matGrid_getMentorGroups(){
