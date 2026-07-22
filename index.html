@@ -357,7 +357,27 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 .task-row{display:flex;align-items:flex-start;gap:9px;padding:8px 10px;border-radius:10px;margin-bottom:2px;border:.5px solid transparent;cursor:pointer}
 .task-row:hover{background:var(--bg3);border-color:var(--bd);transform:translateX(3px)}
 .task-row.done{opacity:.28}
-.task-row input[type=checkbox]{margin-top:2px;flex-shrink:0;accent-color:var(--gr);cursor:pointer;width:14px;height:14px}
+input[type=checkbox]{
+  appearance:none;-webkit-appearance:none;-moz-appearance:none;
+  width:15px;height:15px;flex-shrink:0;
+  border:1.5px solid var(--t2);
+  border-radius:4px;
+  background:var(--bg3);
+  cursor:pointer;
+  display:inline-block;
+  position:relative;
+  vertical-align:middle;
+  transition:background .15s,border-color .15s;
+}
+input[type=checkbox]:hover{border-color:var(--gr)}
+input[type=checkbox]:checked{background:var(--gr);border-color:var(--gr)}
+input[type=checkbox]:checked::after{
+  content:'';position:absolute;left:4px;top:1px;width:4px;height:8px;
+  border:solid #06110c;border-width:0 2px 2px 0;transform:rotate(45deg);
+}
+input[type=checkbox]:disabled{opacity:.5;cursor:default}
+input[type=checkbox]:disabled:hover{border-color:var(--t2)}
+.task-row input[type=checkbox]{margin-top:2px}
 .task-txt{font-size:15px;color:var(--t1);line-height:1.5;flex:1}
 .task-row.done .task-txt{text-decoration:line-through;color:var(--t3)}
 .task-acts{display:flex;gap:3px;flex-shrink:0;opacity:0}
@@ -2176,7 +2196,10 @@ function renderTeamFilter(){
 function resetWeekEveryone(){
   if(!confirm('Reset completed tasks for everyone, for every day this week? This cannot be undone.'))return;
   Object.keys(D.tasks).forEach(uid=>{
-    DAYS.forEach(d=>{(D.tasks[uid]||{})[d]?.forEach((_,i)=>delete D.checked[ckey(uid,d,i)]);});
+    DAYS.forEach(d=>{(D.tasks[uid]||{})[d]?.forEach((t,i)=>{
+      delete D.checked[ckey(uid,d,i)];
+      if(Array.isArray(t.subtasks))t.subtasks.forEach(s=>{s.done=false;});
+    });});
   });
   save();
   renderCL(tPerson,tDay,'team-cl','team-prog-lbl','team-pbar');
@@ -2209,7 +2232,13 @@ function renderTeamDrow(){
 }
 function selTP(id){tPerson=id;renderTeamPgrid();renderCL(id,tDay,'team-cl','team-prog-lbl','team-pbar');}
 function selTD(d){tDay=d;renderTeamDrow();renderCL(tPerson,d,'team-cl','team-prog-lbl','team-pbar');}
-function resetTeam(){(D.tasks[tPerson]||{})[tDay]?.forEach((_,i)=>delete D.checked[ckey(tPerson,tDay,i)]);save();renderCL(tPerson,tDay,'team-cl','team-prog-lbl','team-pbar');}
+function resetTeam(){
+  (D.tasks[tPerson]||{})[tDay]?.forEach((t,i)=>{
+    delete D.checked[ckey(tPerson,tDay,i)];
+    if(Array.isArray(t.subtasks))t.subtasks.forEach(s=>{s.done=false;});
+  });
+  save();renderCL(tPerson,tDay,'team-cl','team-prog-lbl','team-pbar');
+}
 function addTeamTask(){
   const inp=document.getElementById('t-ti');const f=document.getElementById('t-tf').value;const t=inp.value.trim();if(!t)return;
   if(!D.tasks[tPerson])D.tasks[tPerson]={};if(!D.tasks[tPerson][tDay])D.tasks[tPerson][tDay]=[];
@@ -2233,7 +2262,10 @@ function selMWD(d){
 }
 function resetMyWork(){
   const uid=currentUser.id;
-  DAYS.forEach(d=>{(D.tasks[uid]||{})[d]?.forEach((_,i)=>delete D.checked[ckey(uid,d,i)]);});
+  DAYS.forEach(d=>{(D.tasks[uid]||{})[d]?.forEach((t,i)=>{
+    delete D.checked[ckey(uid,d,i)];
+    if(Array.isArray(t.subtasks))t.subtasks.forEach(s=>{s.done=false;});
+  });});
   save();renderCL(uid,mwDay,'mw-cl','mw-lbl','mw-pbar');
 }
 function addMyWorkTask(){
@@ -2244,8 +2276,6 @@ function addMyWorkTask(){
 }
 
 /* ── checklist ── */
-let expandedTasks=new Set();
-function toggleTaskExpand(k){if(expandedTasks.has(k))expandedTasks.delete(k);else expandedTasks.add(k);}
 function renderCL(pid,day,elId,lblId,barId){
   const tasks=(D.tasks[pid]||{})[day]||[];
   let done=0,html='';
@@ -2253,32 +2283,28 @@ function renderCL(pid,day,elId,lblId,barId){
     const k=ckey(pid,day,i);const isDone=!!D.checked[k];if(isDone)done++;
     const subs=Array.isArray(t.subtasks)?t.subtasks:[];
     const subDone=subs.filter(s=>s.done).length;
-    const expanded=expandedTasks.has(k);
     html+=`<div class="task-row${isDone?' done':''}" onclick="tog('${k}','${pid}','${day}',${i},'${elId}','${lblId}','${barId}')">
       <input type="checkbox"${isDone?' checked':''} onclick="event.stopPropagation();tog('${k}','${pid}','${day}',${i},'${elId}','${lblId}','${barId}')">
       <span class="task-txt">${t.t}</span>
       <span class="ftag ${FL[t.f]||'f-w'}">${FN[t.f]||'Weekly'}</span>
       ${subs.length?`<span class="ftag f-w" style="opacity:.7">${subDone}/${subs.length}</span>`:''}
       <div class="task-acts">
-        <button class="ibtn" title="Subtasks" onclick="event.stopPropagation();toggleTaskExpand('${k}');renderCL('${pid}','${day}','${elId}','${lblId}','${barId}')"><i class="ti ti-chevron-${expanded?'up':'down'}" style="font-size:11px"></i></button>
         <button class="ibtn del" onclick="event.stopPropagation();delTask('${pid}','${day}',${i},'${elId}','${lblId}','${barId}')"><i class="ti ti-trash" style="font-size:11px"></i></button>
       </div>
     </div>`;
-    if(expanded){
-      html+=`<div class="subtask-wrap" style="margin:0 0 8px 30px;padding:6px 0 6px 12px;border-left:2px solid var(--bd2)">`;
-      subs.forEach((s,si)=>{
-        html+=`<div class="task-row" style="padding:5px 8px" onclick="event.stopPropagation();toggleSubtask('${pid}','${day}',${i},${si},'${elId}','${lblId}','${barId}')">
-          <input type="checkbox"${s.done?' checked':''} onclick="event.stopPropagation();toggleSubtask('${pid}','${day}',${i},${si},'${elId}','${lblId}','${barId}')">
-          <span class="task-txt" style="font-size:13px${s.done?';text-decoration:line-through;color:var(--t3)':''}">${s.t}</span>
-          <div class="task-acts"><button class="ibtn del" onclick="event.stopPropagation();delSubtask('${pid}','${day}',${i},${si},'${elId}','${lblId}','${barId}')"><i class="ti ti-trash" style="font-size:10px"></i></button></div>
-        </div>`;
-      });
-      html+=`<div class="row" style="gap:6px;margin-top:4px" onclick="event.stopPropagation()">
-        <input class="inp" id="subti-${k}" placeholder="Add subtask…" style="flex:1;font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter')addSubtask('${pid}','${day}',${i},'${elId}','${lblId}','${barId}')">
-        <button class="ibtn" onclick="addSubtask('${pid}','${day}',${i},'${elId}','${lblId}','${barId}')"><i class="ti ti-plus" style="font-size:12px"></i></button>
+    html+=`<div class="subtask-wrap" style="margin:0 0 8px 30px;padding:6px 0 6px 12px;border-left:2px solid var(--bd2)">`;
+    subs.forEach((s,si)=>{
+      html+=`<div class="task-row" style="padding:5px 8px" onclick="event.stopPropagation();toggleSubtask('${pid}','${day}',${i},${si},'${elId}','${lblId}','${barId}')">
+        <input type="checkbox"${s.done?' checked':''} onclick="event.stopPropagation();toggleSubtask('${pid}','${day}',${i},${si},'${elId}','${lblId}','${barId}')">
+        <span class="task-txt" style="font-size:13px${s.done?';text-decoration:line-through;color:var(--t3)':''}">${s.t}</span>
+        <div class="task-acts"><button class="ibtn del" onclick="event.stopPropagation();delSubtask('${pid}','${day}',${i},${si},'${elId}','${lblId}','${barId}')"><i class="ti ti-trash" style="font-size:10px"></i></button></div>
       </div>`;
-      html+=`</div>`;
-    }
+    });
+    html+=`<div class="row" style="gap:6px;margin-top:4px" onclick="event.stopPropagation()">
+      <input class="inp" id="subti-${k}" placeholder="Add subtask…" style="flex:1;font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter')addSubtask('${pid}','${day}',${i},'${elId}','${lblId}','${barId}')">
+      <button class="ibtn" onclick="addSubtask('${pid}','${day}',${i},'${elId}','${lblId}','${barId}')"><i class="ti ti-plus" style="font-size:12px"></i></button>
+    </div>`;
+    html+=`</div>`;
   });
   if(!tasks.length)html=`<div class="empty"><i class="ti ti-clipboard-list"></i>No tasks for this day.</div>`;
   document.getElementById(elId).innerHTML=html;
@@ -2290,7 +2316,13 @@ function renderCL(pid,day,elId,lblId,barId){
 }
 function tog(k,pid,day,i,el,lbl,bar){
   const wasDone=!!D.checked[k];
-  D.checked[k]=!D.checked[k];snapshotPerf(pid);dgops_cascadeFromTask(pid,day,i);save();renderCL(pid,day,el,lbl,bar);
+  D.checked[k]=!D.checked[k];
+  const task=((D.tasks[pid]||{})[day]||[])[i];
+  if(task&&Array.isArray(task.subtasks)&&task.subtasks.length){
+    const newDone=D.checked[k];
+    task.subtasks.forEach(s=>{s.done=newDone;});
+  }
+  snapshotPerf(pid);dgops_cascadeFromTask(pid,day,i);save();renderCL(pid,day,el,lbl,bar);
   if(el==='team-cl')renderTeamPgrid();
   if(!wasDone&&D.checked[k])showTaskDonePop();
 }
@@ -3314,8 +3346,8 @@ function dgops_render(){
   if(empty)empty.style.display='none';
   const canEdit=dgops_canEdit();
   const dis=canEdit?'':'disabled';
-  const groupThCell='padding:7px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;text-align:center';
-  const thCell='padding:8px 8px;border-bottom:1px solid var(--bd);background:var(--bg2);color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:.3px;text-align:center;white-space:normal;min-width:70px';
+  const groupThCell='padding:7px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);color:var(--t1);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;text-align:center';
+  const thCell='padding:8px 8px;border-bottom:1px solid var(--bd);background:var(--bg2);color:var(--t2);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.3px;text-align:center;white-space:normal;min-width:70px';
   const tdCell='padding:7px 8px;border-bottom:1px solid var(--bd);text-align:center';
   const batchTh=`<th rowspan="2" style="${thCell};text-align:left;position:sticky;left:0;background:var(--bg2);min-width:170px;z-index:1">Batch</th>`;
   const groupRow=DGOPS_GROUPS.map(g=>{
