@@ -1095,6 +1095,12 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 
 <!-- MANAGE -->
 <div id="view-manage" class="view">
+  <div class="sec">Daily Task Checklist</div>
+  <div class="add-form">
+    <div class="add-form-title">Load the DG Daily Task Checklist</div>
+    <div style="font-size:12px;color:var(--t3);margin-bottom:10px">Replaces the Team/My Tasks checklist for Aashi, Nishika, Anubha, Ruchika, Pratik and Himanshu with the latest checklist (tasks + subtasks). Clears their currently-checked state for this week.</div>
+    <button class="btn btn-gr" onclick="applyDGTaskChecklist()"><i class="ti ti-refresh"></i> Load Daily Task Checklist</button>
+  </div>
   <div class="sec">Add team member</div>
   <div class="add-form">
     <div class="fgrid">
@@ -1382,6 +1388,261 @@ function animCount(el,target,suffix=''){
 
 /* ── DATA ── */
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+const DG_MENTOR_TASKS={
+  Monday:[
+    {t:'Ops Kickoff — 11:00 AM',f:'w',subtasks:[
+      {t:'Attended with your P0 list and RCA plan ready?',done:false},
+    ]},
+    {t:'Priority Calling — RCA of Weekend Sessions',f:'w',subtasks:[
+      {t:'All P0 low raters called for every owned batch?',done:false},
+      {t:'Few P2 no raters called (enough to complete the session RCA)?',done:false},
+      {t:'RCA documented per batch — what went wrong: faculty issue / content issue / tech issue?',done:false},
+      {t:'Call outcomes logged in the tracker (not verbal)?',done:false},
+    ]},
+    {t:'RCA & Feedback Emails — by EOD',f:'w',subtasks:[
+      {t:'Prodegree batches: RCA + feedback email sent to Faculty AND Content team?',done:false},
+      {t:'Institute programmes: RCA + feedback email sent to Institute SPOC?',done:false},
+      {t:'Below-9 sessions flagged to Himanshu with root cause?',done:false},
+    ]},
+    {t:'Session Agenda Sheet',f:'w',subtasks:[
+      {t:'Session agenda sheet updated for next weekend (topics, faculty, timings) for every owned batch?',done:false},
+      {t:'Any missing faculty / topic confirmation flagged in the sheet?',done:false},
+    ]},
+    {t:'New Batch Launch (T-Days)',f:'e',subtasks:[
+      {t:'T-10: Batch tracker created? Dummy batch created (new program launches)?',done:false},
+      {t:'T-9: Main batch creation completed?',done:false},
+      {t:'T-8: Content uploaded in dummy batch (coordinated with content team)?',done:false},
+      {t:'T-7: Learner list from OG + batch profile from Iqbal updated in tracker?',done:false},
+      {t:'T-7: Pegasus access given to all enrolled learners?',done:false},
+      {t:'T-7: Content published in the MAIN batch (hard stop)?',done:false},
+      {t:'T-7: Programme commencement welcome email sent?',done:false},
+      {t:'T-6: Welcome onboarding calls done — DNP protocol followed (3 attempts + WhatsApp after every DNP, every conversation documented)?',done:false},
+      {t:'T-5: Session link created? TO invite email + broadcast sent? Calendars blocked for learners, faculty, and stakeholders?',done:false},
+      {t:'T-3 and T-1: New enrollees re-checked with OG, Pegasus access extended, T-emails + broadcasts sent?',done:false},
+      {t:'T-1 hour: Final email + broadcast sent?',done:false},
+      {t:'Red flags discussed with Himanshu at T-6, T-5, T-3 and T-1?',done:false},
+    ]},
+    {t:'Batch Closure',f:'e',subtasks:[
+      {t:'Final attendance, grades, and completion % updated in the batch tracker (no #REF! left behind)?',done:false},
+      {t:'Batch closure email sent — and logged in the Granth "Batch Closure Email Sent" column?',done:false},
+      {t:'Closure confirmation shared with the institute / partner?',done:false},
+      {t:'Final feedback / NPS pull completed for the batch?',done:false},
+      {t:'Certificates / e-convocation coordinated (pro-degrees)?',done:false},
+    ]},
+    {t:'Monthly Collection Cycle',f:'m',subtasks:[
+      {t:'By the 12th: collection target sheet updated?',done:false},
+      {t:'By the 16th: learner payment data cleaned?',done:false},
+      {t:'After the 16th: automated installment reminder emails triggered?',done:false},
+      {t:'Reconciliation done with Iqbal / Finance — discrepancies flagged?',done:false},
+    ]},
+  ],
+  Tuesday:[
+    {t:'Week Off',f:'w',subtasks:[
+      {t:'No tasks. No calls. No emails. Genuine emergencies only → Himanshu’s phone.',done:false},
+    ]},
+  ],
+  Wednesday:[
+    {t:'Session — per owned batch',f:'w',subtasks:[
+      {t:'Calendar blocked for faculty AND students?',done:false},
+      {t:'Session agenda sent via email to the learners?',done:false},
+      {t:'Session agenda sent on WhatsApp?',done:false},
+      {t:'Email session reminder scheduled for the weekend?',done:false},
+      {t:'Zoom link + Meeting ID verified working?',done:false},
+      {t:'Faculty confirmed — no pending availability issues?',done:false},
+    ]},
+    {t:'Pre-read Materials — per owned batch',f:'w',subtasks:[
+      {t:'Pre-read materials received from the institute?',done:false},
+      {t:'If not received — chaser email sent to institute SPOC today?',done:false},
+      {t:'Pre-reads shared with learners (email + WhatsApp)?',done:false},
+      {t:'Pre-reads uploaded on Pegasus?',done:false},
+      {t:'Material Delivery Tracker updated?',done:false},
+    ]},
+    {t:'Open Pointers — raised to Himanshu',f:'w',subtasks:[
+      {t:'Every open pointer that blocks weekend alignment raised to Himanshu today?',done:false},
+      {t:'Nothing pending that the mentor is silently sitting on?',done:false},
+      {t:'Learner red flags (drop risk, refund threat, institute complaint) highlighted to Himanshu in writing?',done:false},
+    ]},
+  ],
+  Thursday:[
+    {t:'Priority Calling — Completion',f:'w',subtasks:[
+      {t:'ALL P2 no-rater calls completed?',done:false},
+      {t:'ALL P1 absentee calls completed?',done:false},
+      {t:'High-rater (P3) calls started — exactly 3 high raters contacted per batch?',done:false},
+      {t:'All outcomes logged in tracker?',done:false},
+    ]},
+    {t:'Escalations & Queries',f:'w',subtasks:[
+      {t:'Every escalated participant case owned by you — closed today?',done:false},
+      {t:'Every open Freshdesk query responded to (playbook format)?',done:false},
+      {t:'Anything you cannot close — handed to Himanshu with full context?',done:false},
+    ]},
+  ],
+  Friday:[
+    {t:'Installment Filtering & Access Blocking — per owned batch',f:'w',subtasks:[
+      {t:'List of learners with unpaid installments filtered from collection tracker?',done:false},
+      {t:'Final payment reminder sent to each unpaid learner (email + WhatsApp)?',done:false},
+      {t:'Access blocked on Pegasus for learners whose installment remains unpaid?',done:false},
+      {t:'Blocked-learner list shared with Himanshu?',done:false},
+    ]},
+    {t:'Weekend Session Allotment',f:'w',subtasks:[
+      {t:'Every weekend session allotted to a batch mentor?',done:false},
+      {t:'2-device rule respected — max 2 simultaneous sessions per mentor?',done:false},
+      {t:'Overflow sessions assigned to backups (Akshansh / Rohit / Gungun / Ayush — max 1 each, no overlaps)?',done:false},
+      {t:'Allotment visible to the whole team?',done:false},
+    ]},
+    {t:'Final Alignment Check',f:'w',subtasks:[
+      {t:'Everything finalized — agenda out, reminders scheduled, pre-reads delivered, faculty reconfirmed?',done:false},
+      {t:'Ticket closure ≥ 70% for the week?',done:false},
+      {t:'Batch summary report sent for every owned batch by EOD?',done:false},
+    ]},
+  ],
+  Saturday:[
+    {t:'Session Delivery — per session',f:'d',subtasks:[
+      {t:'Reminder sent on email + WhatsApp 30 minutes before the session?',done:false},
+      {t:'Session monitored live (2-device rule)?',done:false},
+      {t:'Attendance tracked?',done:false},
+      {t:'Faculty + content ratings collected post-session?',done:false},
+    ]},
+    {t:'Post-Session Institute Email — immediately after EACH session',f:'d',subtasks:[
+      {t:'Email sent to institute requesting session PPT + post-read materials?',done:false},
+      {t:'Any material received forwarded to learners within 5 minutes?',done:false},
+      {t:'Material Delivery Tracker updated?',done:false},
+    ]},
+    {t:'Session Notes',f:'d',subtasks:[
+      {t:'Session health notes shared to backend by EOD?',done:false},
+    ]},
+  ],
+  Sunday:[
+    {t:'Session Delivery — per session',f:'d',subtasks:[
+      {t:'Reminder 30 minutes before? Live monitoring? Attendance? Ratings collected?',done:false},
+    ]},
+    {t:'Post-Session Institute Email — immediately after EACH session',f:'d',subtasks:[
+      {t:'PPT + post-read request email sent to institute?',done:false},
+      {t:'Received materials forwarded to learners within 5 minutes + tracker updated?',done:false},
+    ]},
+    {t:'Weekend Close-out',f:'w',subtasks:[
+      {t:'Attendance + feedback trackers updated with full weekend data?',done:false},
+      {t:'Priority calling list built for Monday (P0 / P1 / P2 / P3)?',done:false},
+      {t:'Weekend session report shared to backend by EOD?',done:false},
+    ]},
+  ],
+};
+const DG_PRATIK_TASKS={
+  Monday:[
+    {t:'Weekend Data Drop — hard deadline 11:00 AM',f:'w',subtasks:[
+      {t:'All batch trackers updated with Sat + Sun attendance and feedback?',done:false},
+      {t:'Leadership dashboard consolidated?',done:false},
+      {t:'P0–P3 priority calling report published to all mentors?',done:false},
+      {t:'Absentee email macro run (with Rohit & Akshansh)?',done:false},
+      {t:'Broken formulas / #REF! errors in trackers fixed BEFORE publishing?',done:false},
+    ]},
+    {t:'Ops Kickoff — 11:00 AM',f:'w',subtasks:[
+      {t:'Attended with your P0 list and RCA plan ready?',done:false},
+    ]},
+    {t:'Monthly Collection Cycle',f:'m',subtasks:[
+      {t:'By the 12th: collection target sheet updated?',done:false},
+      {t:'By the 16th: learner payment data cleaned?',done:false},
+      {t:'After the 16th: automated installment reminder emails triggered?',done:false},
+      {t:'Reconciliation done with Iqbal / Finance — discrepancies flagged?',done:false},
+    ]},
+  ],
+  Tuesday:[
+    {t:'Week Off',f:'w',subtasks:[
+      {t:'No tasks. No calls. No emails. Genuine emergencies only → Himanshu’s phone.',done:false},
+    ]},
+  ],
+  Wednesday:[
+    {t:'Zoom & Platform Prep — before noon',f:'w',subtasks:[
+      {t:'All weekend Zoom links + Meeting IDs created and shared with each mentor?',done:false},
+      {t:'AO/TO PPTs ready where applicable?',done:false},
+      {t:'Last weekend’s recordings + materials live on Pegasus, module names matching session plan?',done:false},
+    ]},
+    {t:'Open Pointers — raised to Himanshu',f:'w',subtasks:[
+      {t:'Every open pointer that blocks weekend alignment raised to Himanshu today?',done:false},
+      {t:'Nothing pending that the mentor is silently sitting on?',done:false},
+      {t:'Learner red flags (drop risk, refund threat, institute complaint) highlighted to Himanshu in writing?',done:false},
+    ]},
+  ],
+  Thursday:[
+    {t:'Faculty Invoices (15-day cycle)',f:'15',subtasks:[
+      {t:'Invoice tracker updated with Rohit Rawat? Amounts cross-checked? Status shared with Himanshu?',done:false},
+    ]},
+  ],
+  Friday:[
+    {t:'Weekend Session Allotment',f:'w',subtasks:[
+      {t:'Every weekend session allotted to a batch mentor?',done:false},
+      {t:'2-device rule respected — max 2 simultaneous sessions per mentor?',done:false},
+      {t:'Overflow sessions assigned to backups (Akshansh / Rohit / Gungun / Ayush — max 1 each, no overlaps)?',done:false},
+      {t:'Allotment visible to the whole team?',done:false},
+    ]},
+    {t:'Leadership MIS',f:'w',subtasks:[
+      {t:'Friday MIS compiled — attendance, feedback, tickets, NPS, collections merged with issues highlighted?',done:false},
+    ]},
+  ],
+  Saturday:[
+    {t:'Data Pull',f:'d',subtasks:[
+      {t:'Saturday attendance (Pratik) + feedback (Rohit/Akshansh) in batch trackers by EOD?',done:false},
+    ]},
+  ],
+  Sunday:[
+    {t:'Data Pull',f:'d',subtasks:[
+      {t:'Sunday attendance + feedback in trackers by EOD — Monday 11 AM drop is set up?',done:false},
+    ]},
+  ],
+};
+const DG_HIMANSHU_TASKS={
+  Monday:[
+    {t:'Ops Kickoff — 11:00 AM',f:'w',subtasks:[
+      {t:'Attended with your P0 list and RCA plan ready?',done:false},
+    ]},
+    {t:'Manager Review',f:'w',subtasks:[
+      {t:'11 AM data drop verified?',done:false},
+      {t:'Global Batch Health reviewed — below-9 list ready for Ritesh Singh meeting?',done:false},
+      {t:'Ritesh Singh meeting (cash metrics) attended?',done:false},
+      {t:'Spot-check: 2 mentors’ P0 call logs verified in tracker?',done:false},
+    ]},
+  ],
+  Tuesday:[
+    {t:'Week Off',f:'w',subtasks:[
+      {t:'No tasks. No calls. No emails. Genuine emergencies only → Himanshu’s phone.',done:false},
+    ]},
+  ],
+  Wednesday:[
+    {t:'Pointer Closure',f:'w',subtasks:[
+      {t:'All raised pointers reviewed in Wednesday huddle?',done:false},
+      {t:'Each pointer closed by EOD today — or committed for closure by Thursday EOD?',done:false},
+      {t:'EOD sweep done: every batch has agenda out on both channels + reminder scheduled?',done:false},
+      {t:'Ritesh Singh meeting (cash metrics) attended?',done:false},
+    ]},
+  ],
+  Thursday:[
+    {t:'Carry-over Closures',f:'w',subtasks:[
+      {t:'All Wednesday pointers committed for Thursday — closed by EOD?',done:false},
+      {t:'Escalated cases from mentors reviewed and actioned?',done:false},
+      {t:'Looker / batch performance reviewed with team?',done:false},
+    ]},
+  ],
+  Friday:[
+    {t:'Weekend Session Allotment',f:'w',subtasks:[
+      {t:'Every weekend session allotted to a batch mentor?',done:false},
+      {t:'2-device rule respected — max 2 simultaneous sessions per mentor?',done:false},
+      {t:'Overflow sessions assigned to backups (Akshansh / Rohit / Gungun / Ayush — max 1 each, no overlaps)?',done:false},
+      {t:'Allotment visible to the whole team?',done:false},
+    ]},
+    {t:'Manager Close-out',f:'w',subtasks:[
+      {t:'Ritesh Singh meeting (cash + delivery metrics) attended with MIS?',done:false},
+      {t:'Friday huddle run — 15-minute verification, nothing new opened?',done:false},
+      {t:'Newsletter status checked with Akshansh & Rohit (first week of month)? NPS quarterly check?',done:false},
+    ]},
+  ],
+  Saturday:[],
+  Sunday:[
+    {t:'Manager Weekend Review',f:'w',subtasks:[
+      {t:'Any below-9 session, tech failure, or missed institute email identified tonight?',done:false},
+      {t:'Every mentor’s Monday P0 list confirmed ready — calling starts 10 AM sharp?',done:false},
+    ]},
+  ],
+};
+
 function defLoad(){
   return{
     members:[
@@ -1396,9 +1657,12 @@ function defLoad(){
       {id:'AY',name:'Ayush',role:'Batch Owner',init:'AY',color:'gr',team:'og'},
     ],
     tasks:{
-      AS:{Saturday:[{t:'Send session reminder email 30 min before',f:'d'},{t:'Send WhatsApp reminder 30 min before',f:'d'},{t:'Monitor assigned sessions',f:'d'},{t:'Collect faculty & content ratings post-session',f:'d'},{t:'Log learner issues',f:'d'},{t:'Forward institute materials within 5 min',f:'e'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Sunday:[{t:'Send session reminder email 30 min before',f:'d'},{t:'Send WhatsApp reminder 30 min before',f:'d'},{t:'Monitor assigned sessions',f:'d'},{t:'Collect faculty & content ratings',f:'d'},{t:'Update attendance tracker',f:'w'},{t:'Update feedback tracker',f:'w'},{t:'Update priority calling list — absent + low rating',f:'w'},{t:'Forward institute materials within 5 min',f:'e'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Monday:[{t:'Send post-session feedback email to institutes',f:'w'},{t:'Begin priority calling — min 3 learners per batch',f:'w'},{t:'Update priority calling tracker',f:'w'},{t:'Log below-9 sessions with root cause',f:'w'},{t:'Respond to all institute/faculty emails',f:'d'},{t:'Forward materials to learners within 5 min',f:'e'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Tuesday:[{t:'Confirm Zoom link from Pratik',f:'w'},{t:'Review session agenda before sending',f:'w'},{t:'Send agenda via email',f:'w'},{t:'Send agenda via WhatsApp',f:'w'},{t:'Follow up installments via call',f:'w'},{t:'Follow up installments via WhatsApp',f:'w'},{t:'Address faculty availability issues',f:'w'},{t:'Check QP — send to Digiproctor if received',f:'e'},{t:'Forward materials within 5 min',f:'e'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Wednesday:[{t:'Complete priority calling — all pending learners',f:'w'},{t:'Update priority calling tracker — final',f:'w'},{t:'Send next session update via email',f:'w'},{t:'Send next session update via WhatsApp',f:'w'},{t:'Flag any batch scoring below 9',f:'w'},{t:'Attend Wednesday team huddle',f:'w'},{t:'Forward materials within 5 min',f:'e'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Thursday:[{t:'Confirm weekend agenda is ready',f:'w'},{t:'Confirm faculty assigned for weekend',f:'w'},{t:'Escalate unresolved issues to Himanshu',f:'w'},{t:'Review learner feedback trends',f:'w'},{t:'Forward materials within 5 min',f:'e'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Friday:[{t:'Final check — weekend agendas confirmed',f:'w'},{t:'Confirm Zoom links active',f:'w'},{t:'Send gentle reminder — session plan + materials via email',f:'w'},{t:'Send gentle reminder via WhatsApp',f:'w'},{t:'Attend Friday team huddle',f:'w'},{t:'NPS rollout check — every 3 months',f:'m'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}]},
-      PK:{Saturday:[{t:'Monitor assigned sessions',f:'d'},{t:'Track attendance and collect ratings',f:'d'},{t:'Note recording/tech issues',f:'d'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Sunday:[{t:'Monitor assigned sessions',f:'d'},{t:'Track attendance and collect ratings',f:'d'},{t:'Note recording issues for Monday upload',f:'d'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Monday:[{t:'Upload Saturday recordings to Pegasis',f:'w'},{t:'Upload Sunday recordings to Pegasis',f:'w'},{t:'Upload case studies and materials to Pegasis',f:'w'},{t:'Verify module names match session plan',f:'w'},{t:'Flag any module mismatch to Himanshu',f:'w'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Tuesday:[{t:'Create Zoom links for all Saturday sessions',f:'w'},{t:'Create Zoom links for all Sunday sessions',f:'w'},{t:'Generate Meeting IDs and passcodes',f:'w'},{t:'Share Zoom details with each mentor',f:'w'},{t:'Prepare AO/TO PPT for relevant batches',f:'w'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Wednesday:[{t:'Verify all Zoom links working',f:'w'},{t:'Confirm materials accessible on Pegasis',f:'w'},{t:'Cross-check session plan vs Pegasis modules',f:'w'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Thursday:[{t:'Update faculty invoice tracker with Rohit Rawat',f:'15'},{t:'Cross-check invoice amounts and batch names',f:'15'},{t:'Share invoice status with Himanshu',f:'15'},{t:'Confirm weekend Zoom links shared',f:'w'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Friday:[{t:'Final check — all Zoom links confirmed',f:'w'},{t:'Confirm materials uploaded on Pegasis',f:'w'},{t:'Confirm AO/TO PPTs ready for weekend',f:'w'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}]},
-      HS:{Saturday:[{t:'Monitor own batch sessions',f:'d'},{t:'Send reminders for my batches',f:'d'},{t:'Collect feedback from learners',f:'d'}],Sunday:[{t:'Monitor own batch sessions',f:'d'},{t:'Update all trackers — attendance, feedback, priority calling',f:'w'},{t:'Review Global Batch Health dashboard',f:'w'}],Monday:[{t:'Review Global Batch Health — note all below-9 sessions',f:'w'},{t:'Prepare notes for Ritesh Singh cash metrics meeting',f:'w'},{t:'Attend Ritesh Singh meeting — cash metrics',f:'w'},{t:'Attend Monday team huddle',f:'w'},{t:'Confirm Pratik uploaded all recordings to Pegasis',f:'w'},{t:'Confirm post-session feedback sent to institutes',f:'w'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'},{t:'Review team task log',f:'d'}],Tuesday:[{t:'Confirm Pratik has created all Zoom links',f:'w'},{t:'Review all agendas before sending',f:'w'},{t:'Check installment follow-up status',f:'w'},{t:'Handle any institute escalations',f:'e'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Wednesday:[{t:'Attend Ritesh Singh meeting — cash metrics',f:'w'},{t:'Attend Wednesday team huddle — cashflow + issues',f:'w'},{t:'Review batch performance across all programmes',f:'w'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Thursday:[{t:'Review Looker dashboard with team',f:'w'},{t:'Check faculty assignments for weekend',f:'w'},{t:'Check Pratik faculty invoice update',f:'15'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}],Friday:[{t:'Attend Ritesh Singh meeting — cash + delivery metrics',f:'w'},{t:'Attend Friday team huddle — weekend alignment',f:'w'},{t:'Final check — all weekend sessions aligned',f:'w'},{t:'Check newsletter assigned to Akshansh & Rohit',f:'m'},{t:'NPS rollout check',f:'m'},{t:'Assign & resolve tickets — morning',f:'d'},{t:'Assign & resolve tickets — evening',f:'d'}]},
+      AS:JSON.parse(JSON.stringify(DG_MENTOR_TASKS)),
+      NI:JSON.parse(JSON.stringify(DG_MENTOR_TASKS)),
+      AB:JSON.parse(JSON.stringify(DG_MENTOR_TASKS)),
+      RA:JSON.parse(JSON.stringify(DG_MENTOR_TASKS)),
+      PK:JSON.parse(JSON.stringify(DG_PRATIK_TASKS)),
+      HS:JSON.parse(JSON.stringify(DG_HIMANSHU_TASKS)),
       RS:{Monday:[{t:'Review cash metrics with Himanshu',f:'w'},{t:'Review DG team performance',f:'w'}],Wednesday:[{t:'Review cash metrics with Himanshu',f:'w'},{t:'Review escalations',f:'w'}],Friday:[{t:'Review cash + delivery metrics',f:'w'},{t:'Review weekend session scores',f:'w'}]},
     },
     checked:{},notes:[],meetings:[],moms:[],
@@ -2496,6 +2760,19 @@ function removeMemberBatch(memberId,idx){
   m.batches.splice(idx,1);
   save();renderManage();
 }
+function applyDGTaskChecklist(){
+  if(currentUser?.role!=='manager')return;
+  if(!confirm('Replace the Daily Task Checklist for Aashi, Nishika, Anubha, Ruchika, Pratik and Himanshu with the new DG Daily Task Checklist? This clears their currently-checked tasks for this week (subtasks reset to un-done too).'))return;
+  const mentors=['AS','NI','AB','RA'];
+  mentors.forEach(id=>{D.tasks[id]=JSON.parse(JSON.stringify(DG_MENTOR_TASKS));});
+  D.tasks.PK=JSON.parse(JSON.stringify(DG_PRATIK_TASKS));
+  D.tasks.HS=JSON.parse(JSON.stringify(DG_HIMANSHU_TASKS));
+  [...mentors,'PK','HS'].forEach(id=>{
+    Object.keys(D.checked).forEach(k=>{if(k.startsWith(id+'__'))delete D.checked[k];});
+  });
+  save();
+  toast('Daily Task Checklist loaded','success');
+}
 function renderManage(){
   const dgEl=document.getElementById('manage-list-dg');
   const ogEl=document.getElementById('manage-list-og');
@@ -2898,22 +3175,32 @@ function matGrid_renderStats(){
 }
 
 /* ── DG OPERATIONS ── */
-const DGOPS_COLS=[
-  {key:'s1',lbl:'Session 1'},
-  {key:'s2',lbl:'Session 2'},
-  {key:'feedback',lbl:'Post-Session Feedback to Institute/Faculty'},
-  {key:'preRead',lbl:'Pre Read'},
-  {key:'postRead',lbl:'Post Read'},
-  {key:'sessionCreation',lbl:'Session Creation'},
-  {key:'facultyAlignment',lbl:'Faculty Alignment'},
-  {key:'facultyCalBlock',lbl:'Faculty Calendar Block'},
-  {key:'studentCalBlock',lbl:'Student Calendar Block'},
-  {key:'exams',lbl:'Exams'},
-  {key:'qp',lbl:'Q.P'},
-  {key:'verify',lbl:'Verify From Our End'},
-  {key:'uploadProctor',lbl:'Upload on DG Proctor'},
-  {key:'priorityCalling40',lbl:'Priority Calling ≥40%'},
+const DGOPS_GROUPS=[
+  {label:'Feedback',cols:[
+    {key:'s1',lbl:'Session 1',type:'date'},
+    {key:'s2',lbl:'Session 2',type:'date'},
+    {key:'sessionCreation',lbl:'Session Creation',type:'check'},
+    {key:'facultyAlignment',lbl:'Faculty Alignment',type:'check'},
+    {key:'facultyCalBlock',lbl:'Faculty Calendar Block',type:'check'},
+    {key:'studentCalBlock',lbl:'Student Calendar Block',type:'check'},
+    {key:'feedback',lbl:'Post Session Feedback to Ins or Faculty',type:'check'},
+    {key:'priorityCalling40',lbl:'Priority Calling ≥40%',type:'check'},
+  ]},
+  {label:'Materials',cols:[
+    {key:'preRead',lbl:'Pre Read',type:'check'},
+    {key:'postRead',lbl:'Post Read',type:'check'},
+  ]},
+  {label:'Exams',cols:[
+    {key:'exams',lbl:'Exams',type:'check'},
+    {key:'qpReceived',lbl:'Q.P Received from Institute',type:'check'},
+    {key:'qpSentProctor',lbl:'Q.P & Parameter Sheet Sent to DG Proctor',type:'check'},
+    {key:'qpApproved',lbl:'Q.P Approved & Sent to Institute for Approval',type:'check'},
+    {key:'testKeys',lbl:'Test Keys Released',type:'check'},
+  ]},
+  {label:null,cols:[{key:'verify',lbl:'Verify From Our End',type:'check'}]},
+  {label:null,cols:[{key:'uploadProctor',lbl:'Upload on DG Proctor',type:'check'}]},
 ];
+function dgops_canEdit(){return currentUser?.role==='manager';}
 function dgops_batchList(){
   const rows=[];
   D.members.filter(m=>m.team!=='og').forEach(m=>{
@@ -2929,9 +3216,17 @@ function dgops_init(){
   dgops_render();
 }
 function dgops_toggle(key,field,checked){
+  if(!dgops_canEdit())return;
   if(!D.dgOps.statuses[key])D.dgOps.statuses[key]={};
   D.dgOps.statuses[key][field]=checked;
   save();
+}
+function dgops_setDate(key,field,value){
+  if(!dgops_canEdit())return;
+  if(!D.dgOps.statuses[key])D.dgOps.statuses[key]={};
+  D.dgOps.statuses[key][field]=value||'';
+  save();
+  dgops_render();
 }
 function dgops_render(){
   const rows=dgops_batchList();
@@ -2944,19 +3239,38 @@ function dgops_render(){
     return;
   }
   if(empty)empty.style.display='none';
-  const thCell='padding:9px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);color:var(--t3);font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;text-align:center;white-space:normal;min-width:64px';
-  const tdCell='padding:8px 10px;border-bottom:1px solid var(--bd);text-align:center';
+  const canEdit=dgops_canEdit();
+  const dis=canEdit?'':'disabled';
+  const groupThCell='padding:7px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:.5px;text-align:center';
+  const thCell='padding:8px 8px;border-bottom:1px solid var(--bd);background:var(--bg2);color:var(--t3);font-size:10px;text-transform:uppercase;letter-spacing:.3px;text-align:center;white-space:normal;min-width:70px';
+  const tdCell='padding:7px 8px;border-bottom:1px solid var(--bd);text-align:center';
+  const batchTh=`<th rowspan="2" style="${thCell};text-align:left;position:sticky;left:0;background:var(--bg2);min-width:170px;z-index:1">Batch</th>`;
+  const groupRow=DGOPS_GROUPS.map(g=>{
+    if(g.label)return`<th colspan="${g.cols.length}" style="${groupThCell};border-left:1px solid var(--bd2);border-right:1px solid var(--bd2)">${g.label}</th>`;
+    return`<th rowspan="2" style="${thCell}">${g.cols[0].lbl}</th>`;
+  }).join('');
+  const subRow=DGOPS_GROUPS.filter(g=>g.label).map(g=>g.cols.map(c=>`<th style="${thCell};border-left:1px solid var(--bd)">${c.lbl}</th>`).join('')).join('');
   table.innerHTML=`
-    <thead><tr>
-      <th style="${thCell};text-align:left;position:sticky;left:0;background:var(--bg2);min-width:170px">Batch</th>
-      ${DGOPS_COLS.map(c=>`<th style="${thCell}">${c.lbl}</th>`).join('')}
-    </tr></thead>
+    <thead>
+      <tr>${batchTh}${groupRow}</tr>
+      <tr>${subRow}</tr>
+    </thead>
     <tbody>
       ${rows.map(r=>{
         const st=D.dgOps.statuses[r.key]||{};
+        const cells=DGOPS_GROUPS.map(g=>g.cols.map(c=>{
+          if(c.type==='date'){
+            const v=st[c.key]||'';
+            return`<td style="${tdCell}"><div class="row" style="gap:3px;justify-content:center;align-items:center">
+              <input type="date" value="${v}" ${dis} style="font-size:11px;padding:2px 3px;border:1px solid var(--bd2);border-radius:5px;background:var(--bg3);color:var(--t1);max-width:126px" onchange="dgops_setDate('${r.key}','${c.key}',this.value)">
+              ${canEdit?`<button class="ibtn" title="Clear date" style="width:20px;height:20px;font-size:11px" onclick="dgops_setDate('${r.key}','${c.key}','')">–</button>`:''}
+            </div></td>`;
+          }
+          return`<td style="${tdCell}"><input type="checkbox"${st[c.key]?' checked':''} ${dis} onchange="dgops_toggle('${r.key}','${c.key}',this.checked)"></td>`;
+        }).join('')).join('');
         return`<tr>
           <td style="${tdCell};text-align:left;font-weight:600;color:var(--t1);position:sticky;left:0;background:var(--bg2)">${r.batchName}<div style="font-size:10px;font-weight:400;color:var(--t3)">${r.mentorName}</div></td>
-          ${DGOPS_COLS.map(c=>`<td style="${tdCell}"><input type="checkbox"${st[c.key]?' checked':''} onchange="dgops_toggle('${r.key}','${c.key}',this.checked)"></td>`).join('')}
+          ${cells}
         </tr>`;
       }).join('')}
     </tbody>`;
