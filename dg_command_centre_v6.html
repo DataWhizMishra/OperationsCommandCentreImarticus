@@ -973,7 +973,10 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 <!-- OVERVIEW -->
 <div id="view-overview" class="view">
   <div class="pgrid2" id="ov-stats"></div>
-  <div class="sec">Today — <span id="ov-today" style="color:var(--gr);text-transform:none;letter-spacing:0;font-size:11px"></span></div>
+  <div class="row" style="justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div class="sec" style="margin-bottom:0">Today — <span id="ov-today" style="color:var(--gr);text-transform:none;letter-spacing:0;font-size:11px"></span></div>
+    <button class="dbtn" onclick="exportOverviewCSV()"><i class="ti ti-download" style="font-size:12px"></i> Export CSV</button>
+  </div>
   <div id="ov-list"></div>
 </div>
 
@@ -1180,18 +1183,6 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 </div>
 </div>
 
-<!-- FACULTY -->
-<div id="view-faculty" class="view">
-  <div class="fac-hdr" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-    <div>
-      <div class="fac-hdr-title"><i class="ti ti-school" style="font-size:16px;color:#04c584"></i>Faculty Directory</div>
-      <div class="fac-hdr-sub">Live sessions, masterclasses and extra faculty engagements with per-session rates</div>
-    </div>
-    <span class="fac-view-badge" id="fac-mode-badge"></span>
-  </div>
-  <div class="fac-cards" id="fac-cards"></div>
-</div>
-
 </div><!-- /.view-wrap -->
 </main>
 </div><!-- /.layout -->
@@ -1244,7 +1235,6 @@ const TABS_MGR=[
   {id:'notes',icon:'ti-notebook',label:'Notes'},
   {id:'mom',icon:'ti-file-text',label:'MOM'},
   {id:'matdelivery',icon:'ti-mail-check',label:'Materials'},
-  {id:'faculty',icon:'ti-school',label:'Faculty'},
   {id:'manage',icon:'ti-settings',label:'Manage'},
 ];
 const TABS_OG=[
@@ -1266,7 +1256,6 @@ const TABS_RS=[
   {id:'mywork',icon:'ti-user',label:'My Tasks'},
   {id:'notes',icon:'ti-notebook',label:'Notes'},
   {id:'mom',icon:'ti-file-text',label:'MOM'},
-  {id:'faculty',icon:'ti-school',label:'Faculty'},
 ];
 
 /* ── color maps ── */
@@ -1468,8 +1457,16 @@ function initMissing(){
   D.members.forEach(m=>{
     if(!D.tasks[m.id])D.tasks[m.id]=JSON.parse(JSON.stringify(D.tasks.AS||{}));
     if(!D.memberPins[m.id])D.memberPins[m.id]='0000';
+    if(!Array.isArray(m.batches))m.batches=[];
   });
   if(!D.tasks.MD)D.tasks.MD=JSON.parse(JSON.stringify(D.tasks.HS||D.tasks.AS||{}));
+  Object.keys(D.tasks).forEach(pid=>{
+    const days=D.tasks[pid]||{};
+    Object.keys(days).forEach(day=>{
+      (days[day]||[]).forEach(t=>{if(!Array.isArray(t.subtasks))t.subtasks=[];});
+    });
+  });
+  if(!D.perfHistory)D.perfHistory={};
   if(!D.faculty)D.faculty={live:[],masterclass:[],extra:[]};
   if(!D.faculty.live)D.faculty.live=[];
   if(!D.faculty.masterclass)D.faculty.masterclass=[];
@@ -1736,7 +1733,6 @@ function switchTab(id){
     if(id==='mom')renderMOMs();
     if(id==='manage')renderManage();
     if(id==='matdelivery')matGrid_init();
-    if(id==='faculty')faculty_init();
   }
   if(curView&&curView!==nextView){
     curView.classList.remove('active');
@@ -1754,13 +1750,83 @@ function progInfo(pid,day){
   return{done,total:t.length,pct:t.length?pc(done/t.length*100):0};
 }
 
+/* ── performance history (drives weekly/monthly export) ── */
+function todayDateStr(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function snapshotPerf(pid){
+  const p=progInfo(pid,todayName());
+  if(!D.perfHistory)D.perfHistory={};
+  if(!Array.isArray(D.perfHistory[pid]))D.perfHistory[pid]=[];
+  const arr=D.perfHistory[pid];const ds=todayDateStr();
+  const existing=arr.find(e=>e.date===ds);
+  if(existing){
+    if(existing.done===p.done&&existing.total===p.total)return false;
+    existing.done=p.done;existing.total=p.total;existing.pct=p.pct;
+  }else{
+    arr.push({date:ds,done:p.done,total:p.total,pct:p.pct});
+    if(arr.length>120)arr.splice(0,arr.length-120);
+  }
+  return true;
+}
+function snapshotAllPerf(){
+  if(!currentUser||!D.members)return;
+  const ids=[...D.members.map(m=>m.id),'HS','MD'];
+  let changed=false;
+  ids.forEach(id=>{if(snapshotPerf(id))changed=true;});
+  if(changed)save();
+}
+function computeWindowPerf(pid,days){
+  const hist=(D.perfHistory||{})[pid]||[];
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-days+1);
+  const cutoffStr=cutoff.getFullYear()+'-'+String(cutoff.getMonth()+1).padStart(2,'0')+'-'+String(cutoff.getDate()).padStart(2,'0');
+  const inWindow=hist.filter(e=>e.date>=cutoffStr);
+  const done=inWindow.reduce((s,e)=>s+e.done,0);
+  const total=inWindow.reduce((s,e)=>s+e.total,0);
+  return{pct:total?pc(done/total*100):null,days:inWindow.length};
+}
+function csvEscape(v){
+  v=v===null||v===undefined?'':String(v);
+  if(/[",\r\n]/.test(v))v='"'+v.replace(/"/g,'""')+'"';
+  return v;
+}
+function downloadCSV(content,filename){
+  const blob=new Blob(['﻿'+content],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+function overviewScopedMembers(){
+  const heads=[
+    {id:'HS',name:'Himanshu Sharma',role:'DG Head',team:'dg'},
+    {id:'MD',name:'Mack Donald',role:'OG Head',team:'og'},
+  ];
+  if(currentUser.role==='manager')return D.members.filter(m=>m.team!=='og');
+  if(currentUser.role==='ogmanager')return D.members.filter(m=>m.team==='og');
+  return[...D.members,...heads];
+}
+function exportOverviewCSV(){
+  const all=overviewScopedMembers();
+  const rows=[['Name','Role','Team','Weekly Completion %','Monthly Completion %','Days Tracked (30d)']];
+  all.forEach(m=>{
+    const wk=computeWindowPerf(m.id,7);
+    const mo=computeWindowPerf(m.id,30);
+    rows.push([m.name,m.role||'',m.team==='og'?'OG':'DG',wk.pct===null?'No data':wk.pct+'%',mo.pct===null?'No data':mo.pct+'%',mo.days]);
+  });
+  const csv=rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  downloadCSV(csv,`DG-Overview-Performance-${todayDateStr()}.csv`);
+  toast('Performance report downloaded','success');
+}
+
 /* ── overview ── */
 function renderOverview(){
   const day=todayName();
   document.getElementById('ov-today').textContent=day;
   const heads=[
-    {id:'HS',name:'Himanshu Sharma',role:'DG Head',init:'HS',color:'gr',avatarSeed:(D.leaderAvatars||{}).HS,avatarStyle:(D.leaderAvatarStyles||{}).HS},
-    {id:'MD',name:'Mack Donald',role:'OG Head',init:'MD',color:'bl',avatarSeed:(D.leaderAvatars||{}).MD,avatarStyle:(D.leaderAvatarStyles||{}).MD},
+    {id:'HS',name:'Himanshu Sharma',role:'DG Head',init:'HS',color:'gr',team:'dg',avatarSeed:(D.leaderAvatars||{}).HS,avatarStyle:(D.leaderAvatarStyles||{}).HS},
+    {id:'MD',name:'Mack Donald',role:'OG Head',init:'MD',color:'bl',team:'og',avatarSeed:(D.leaderAvatars||{}).MD,avatarStyle:(D.leaderAvatarStyles||{}).MD},
   ];
   let all;
   if(currentUser.role==='manager')all=D.members.filter(m=>m.team!=='og');
@@ -1780,19 +1846,45 @@ function renderOverview(){
     animCount(document.getElementById('ov-pct'),pct,'%');
     animCount(document.getElementById('ov-sz'),all.length);
   },50);
-  document.getElementById('ov-list').innerHTML=all.map(m=>{
-    const p=progInfo(m.id,day);const pc2=pcolor(p.pct);const cl=COL[m.color]||COL.gr;
-    return`<div class="card">
-      <div class="row" style="margin-bottom:8px">
-        <div class="av" style="width:36px;height:36px;background:${cl[0]};color:${cl[1]};font-size:11px">${avatarImg(m)}</div>
-        <div style="flex:1"><div style="font-size:14.5px;font-weight:700;color:var(--t1)">${m.name}</div><div style="font-size:11.5px;color:var(--t3)">${m.role}</div></div>
-        <div style="font-size:13px;color:var(--t3);margin-right:8px">${p.done}/${p.total}</div>
-        <div style="font-size:15px;font-weight:800;color:${pc2}">${p.pct}%</div>
-      </div>
-      <div class="mini-prog"><div class="mini-bar" style="width:${p.pct}%;background:${pc2}"></div></div>
-      <div style="font-size:11.5px;color:var(--t3);margin-top:3px">${p.pct>=100?'All done ✓':p.done===0?'Not started':p.total-p.done+' remaining'}</div>
+  if(currentUser.role==='ritesh'){
+    document.getElementById('ov-list').innerHTML=`<div class="card" style="overflow-x:auto;padding:0">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="text-align:left">
+          <th style="padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--t3);font-size:11px;text-transform:uppercase;letter-spacing:.4px">Name</th>
+          <th style="padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--t3);font-size:11px;text-transform:uppercase;letter-spacing:.4px">Team</th>
+          <th style="padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--t3);font-size:11px;text-transform:uppercase;letter-spacing:.4px">Today's Tasks</th>
+          <th style="padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--t3);font-size:11px;text-transform:uppercase;letter-spacing:.4px">Weekly %</th>
+          <th style="padding:11px 14px;border-bottom:1px solid var(--bd);color:var(--t3);font-size:11px;text-transform:uppercase;letter-spacing:.4px">Monthly %</th>
+        </tr></thead>
+        <tbody>${all.map(m=>{
+          const p=progInfo(m.id,day);const pc2=pcolor(p.pct);
+          const wk=computeWindowPerf(m.id,7);const mo=computeWindowPerf(m.id,30);
+          return`<tr>
+            <td style="padding:10px 14px;border-bottom:1px solid var(--bd);font-weight:700;color:var(--t1)">${m.name}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--t3)">${m.team==='og'?'OG':'DG'}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid var(--bd)"><span style="color:${pc2};font-weight:700">${p.done}/${p.total}</span> <span style="color:var(--t3)">(${p.pct}%)</span></td>
+            <td style="padding:10px 14px;border-bottom:1px solid var(--bd)">${wk.pct===null?'<span style="color:var(--t3)">No data</span>':wk.pct+'%'}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid var(--bd)">${mo.pct===null?'<span style="color:var(--t3)">No data</span>':mo.pct+'%'}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
     </div>`;
-  }).join('');
+  }else{
+    document.getElementById('ov-list').innerHTML=all.map(m=>{
+      const p=progInfo(m.id,day);const pc2=pcolor(p.pct);const cl=COL[m.color]||COL.gr;
+      return`<div class="card">
+        <div class="row" style="margin-bottom:8px">
+          <div class="av" style="width:36px;height:36px;background:${cl[0]};color:${cl[1]};font-size:11px">${avatarImg(m)}</div>
+          <div style="flex:1"><div style="font-size:14.5px;font-weight:700;color:var(--t1)">${m.name}</div><div style="font-size:11.5px;color:var(--t3)">${m.role}</div></div>
+          <div style="font-size:13px;color:var(--t3);margin-right:8px">${p.done}/${p.total}</div>
+          <div style="font-size:15px;font-weight:800;color:${pc2}">${p.pct}%</div>
+        </div>
+        <div class="mini-prog"><div class="mini-bar" style="width:${p.pct}%;background:${pc2}"></div></div>
+        <div style="font-size:11.5px;color:var(--t3);margin-top:3px">${p.pct>=100?'All done ✓':p.done===0?'Not started':p.total-p.done+' remaining'}</div>
+      </div>`;
+    }).join('');
+  }
+  snapshotAllPerf();
 }
 
 /* ── team ── */
@@ -1889,17 +1981,41 @@ function addMyWorkTask(){
 }
 
 /* ── checklist ── */
+let expandedTasks=new Set();
+function toggleTaskExpand(k){if(expandedTasks.has(k))expandedTasks.delete(k);else expandedTasks.add(k);}
 function renderCL(pid,day,elId,lblId,barId){
   const tasks=(D.tasks[pid]||{})[day]||[];
   let done=0,html='';
   tasks.forEach((t,i)=>{
     const k=ckey(pid,day,i);const isDone=!!D.checked[k];if(isDone)done++;
+    const subs=Array.isArray(t.subtasks)?t.subtasks:[];
+    const subDone=subs.filter(s=>s.done).length;
+    const expanded=expandedTasks.has(k);
     html+=`<div class="task-row${isDone?' done':''}" onclick="tog('${k}','${pid}','${day}',${i},'${elId}','${lblId}','${barId}')">
       <input type="checkbox"${isDone?' checked':''} onclick="event.stopPropagation();tog('${k}','${pid}','${day}',${i},'${elId}','${lblId}','${barId}')">
       <span class="task-txt">${t.t}</span>
       <span class="ftag ${FL[t.f]||'f-w'}">${FN[t.f]||'Weekly'}</span>
-      <div class="task-acts"><button class="ibtn del" onclick="event.stopPropagation();delTask('${pid}','${day}',${i},'${elId}','${lblId}','${barId}')"><i class="ti ti-trash" style="font-size:11px"></i></button></div>
+      ${subs.length?`<span class="ftag f-w" style="opacity:.7">${subDone}/${subs.length}</span>`:''}
+      <div class="task-acts">
+        <button class="ibtn" title="Subtasks" onclick="event.stopPropagation();toggleTaskExpand('${k}');renderCL('${pid}','${day}','${elId}','${lblId}','${barId}')"><i class="ti ti-chevron-${expanded?'up':'down'}" style="font-size:11px"></i></button>
+        <button class="ibtn del" onclick="event.stopPropagation();delTask('${pid}','${day}',${i},'${elId}','${lblId}','${barId}')"><i class="ti ti-trash" style="font-size:11px"></i></button>
+      </div>
     </div>`;
+    if(expanded){
+      html+=`<div class="subtask-wrap" style="margin:0 0 8px 30px;padding:6px 0 6px 12px;border-left:2px solid var(--bd2)">`;
+      subs.forEach((s,si)=>{
+        html+=`<div class="task-row" style="padding:5px 8px" onclick="event.stopPropagation();toggleSubtask('${pid}','${day}',${i},${si},'${elId}','${lblId}','${barId}')">
+          <input type="checkbox"${s.done?' checked':''} onclick="event.stopPropagation();toggleSubtask('${pid}','${day}',${i},${si},'${elId}','${lblId}','${barId}')">
+          <span class="task-txt" style="font-size:13px${s.done?';text-decoration:line-through;color:var(--t3)':''}">${s.t}</span>
+          <div class="task-acts"><button class="ibtn del" onclick="event.stopPropagation();delSubtask('${pid}','${day}',${i},${si},'${elId}','${lblId}','${barId}')"><i class="ti ti-trash" style="font-size:10px"></i></button></div>
+        </div>`;
+      });
+      html+=`<div class="row" style="gap:6px;margin-top:4px" onclick="event.stopPropagation()">
+        <input class="inp" id="subti-${k}" placeholder="Add subtask…" style="flex:1;font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter')addSubtask('${pid}','${day}',${i},'${elId}','${lblId}','${barId}')">
+        <button class="ibtn" onclick="addSubtask('${pid}','${day}',${i},'${elId}','${lblId}','${barId}')"><i class="ti ti-plus" style="font-size:12px"></i></button>
+      </div>`;
+      html+=`</div>`;
+    }
   });
   if(!tasks.length)html=`<div class="empty"><i class="ti ti-clipboard-list"></i>No tasks for this day.</div>`;
   document.getElementById(elId).innerHTML=html;
@@ -1911,9 +2027,28 @@ function renderCL(pid,day,elId,lblId,barId){
 }
 function tog(k,pid,day,i,el,lbl,bar){
   const wasDone=!!D.checked[k];
-  D.checked[k]=!D.checked[k];save();renderCL(pid,day,el,lbl,bar);
+  D.checked[k]=!D.checked[k];snapshotPerf(pid);save();renderCL(pid,day,el,lbl,bar);
   if(el==='team-cl')renderTeamPgrid();
   if(!wasDone&&D.checked[k])showTaskDonePop();
+}
+function addSubtask(pid,day,i,el,lbl,bar){
+  const k=ckey(pid,day,i);
+  const inp=document.getElementById('subti-'+k);
+  const t=inp?.value.trim();if(!t)return;
+  const task=((D.tasks[pid]||{})[day]||[])[i];if(!task)return;
+  if(!Array.isArray(task.subtasks))task.subtasks=[];
+  task.subtasks.push({t,done:false});
+  save();renderCL(pid,day,el,lbl,bar);
+}
+function toggleSubtask(pid,day,i,si,el,lbl,bar){
+  const task=((D.tasks[pid]||{})[day]||[])[i];
+  const s=task&&task.subtasks&&task.subtasks[si];if(!s)return;
+  s.done=!s.done;save();renderCL(pid,day,el,lbl,bar);
+}
+function delSubtask(pid,day,i,si,el,lbl,bar){
+  const task=((D.tasks[pid]||{})[day]||[])[i];
+  if(!task||!Array.isArray(task.subtasks))return;
+  task.subtasks.splice(si,1);save();renderCL(pid,day,el,lbl,bar);
 }
 let taskDoneTimer=null;
 function showTaskDonePop(){
@@ -2286,21 +2421,48 @@ function manageRow(m,i){
   const otherTeam=m.team==='og'?'dg':'og';
   const otherLbl=m.team==='og'?'Move to DG (Himanshu)':'Move to OG (Mack)';
   const editing=avatarEditTarget===m.id;
+  const batches=Array.isArray(m.batches)?m.batches:[];
   return`<div>
-    <div class="card row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <div class="row" style="gap:10px">
-        <div class="av" style="width:36px;height:36px;background:${c[0]};color:${c[1]};font-size:12px">${avatarImg(m)}</div>
-        <div><div style="font-size:14.5px;font-weight:700;color:var(--t1)">${m.name}</div><div style="font-size:11.5px;color:var(--t3)">${m.role}</div></div>
+    <div class="card" style="display:flex;flex-direction:column;gap:10px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div class="row" style="gap:10px">
+          <div class="av" style="width:36px;height:36px;background:${c[0]};color:${c[1]};font-size:12px">${avatarImg(m)}</div>
+          <div><div style="font-size:14.5px;font-weight:700;color:var(--t1)">${m.name}</div><div style="font-size:11.5px;color:var(--t3)">${m.role}</div></div>
+        </div>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;color:${hasPin?'var(--gr)':'var(--t3)'}"><i class="ti ti-${hasPin?'lock-check':'lock-open'}" style="font-size:12px"></i> ${hasPin?'PIN set':'Default'}</span>
+          <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="openAvatarEditor('${m.id}')"><i class="ti ti-edit" style="font-size:12px"></i> Avatar</button>
+          <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="moveTeam(${i},'${otherTeam}')"><i class="ti ti-arrows-exchange" style="font-size:12px"></i> ${otherLbl}</button>
+          <button class="btn btn-rd" style="font-size:12.5px;padding:6px 11px" onclick="removeMember(${i})"><i class="ti ti-trash" style="font-size:12px"></i> Remove</button>
+        </div>
       </div>
-      <div class="row" style="gap:8px;flex-wrap:wrap">
-        <span style="font-size:11px;color:${hasPin?'var(--gr)':'var(--t3)'}"><i class="ti ti-${hasPin?'lock-check':'lock-open'}" style="font-size:12px"></i> ${hasPin?'PIN set':'Default'}</span>
-        <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="openAvatarEditor('${m.id}')"><i class="ti ti-edit" style="font-size:12px"></i> Avatar</button>
-        <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="moveTeam(${i},'${otherTeam}')"><i class="ti ti-arrows-exchange" style="font-size:12px"></i> ${otherLbl}</button>
-        <button class="btn btn-rd" style="font-size:12.5px;padding:6px 11px" onclick="removeMember(${i})"><i class="ti ti-trash" style="font-size:12px"></i> Remove</button>
+      <div style="border-top:.5px solid var(--bd);padding-top:9px">
+        <div style="font-size:10.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Batches managing / mentoring</div>
+        <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          ${batches.length?batches.map((b,bi)=>`<span class="ftag f-w" style="display:inline-flex;align-items:center;gap:5px">${b}<i class="ti ti-x" style="font-size:10px;cursor:pointer" onclick="removeMemberBatch('${m.id}',${bi})"></i></span>`).join(''):`<span style="font-size:11.5px;color:var(--t3)">No batches assigned yet</span>`}
+        </div>
+        <div class="row" style="gap:6px">
+          <input class="inp" id="mbatch-add-${m.id}" placeholder="Add batch name…" style="flex:1;font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter')addMemberBatch('${m.id}')">
+          <button class="ibtn" onclick="addMemberBatch('${m.id}')"><i class="ti ti-plus" style="font-size:12px"></i></button>
+        </div>
       </div>
     </div>
     ${editing?avatarEditorPanel(m.id):''}
   </div>`;
+}
+function addMemberBatch(memberId){
+  const inp=document.getElementById('mbatch-add-'+memberId);
+  const name=inp?.value.trim();if(!name)return;
+  const m=D.members.find(x=>x.id===memberId);if(!m)return;
+  if(!Array.isArray(m.batches))m.batches=[];
+  m.batches.push(name);
+  save();renderManage();
+  toast('Batch added','success');
+}
+function removeMemberBatch(memberId,idx){
+  const m=D.members.find(x=>x.id===memberId);if(!m||!Array.isArray(m.batches))return;
+  m.batches.splice(idx,1);
+  save();renderManage();
 }
 function renderManage(){
   const dgEl=document.getElementById('manage-list-dg');
@@ -2703,90 +2865,6 @@ function matGrid_renderStats(){
     <div class="mt-stat"><div class="mt-stat-l">Not Relevant</div><div class="mt-stat-v" style="color:var(--t3)">${nr}</div></div>`;
 }
 
-/* ── FACULTY ── */
-const FAC_CARDS=[
-  {key:'live',title:'Live Faculty Session',icon:'ti-broadcast',color:'gr',
-   cols:[{f:'name',lbl:'Faculty Name',ph:'Faculty name…'},{f:'rate',lbl:'Rate / Session',ph:'₹ Rate…'}]},
-  {key:'masterclass',title:'Masterclass',icon:'ti-certificate',color:'pu',
-   cols:[{f:'name',lbl:'Faculty Name',ph:'Faculty name…'},{f:'rate',lbl:'Rate / Session',ph:'₹ Rate…'}]},
-  {key:'extra',title:'Extra',icon:'ti-user-plus',color:'am',
-   cols:[{f:'name',lbl:'Faculty Name',ph:'Faculty name…'},{f:'session',lbl:'Session',ph:'Session…'},{f:'rate',lbl:'Rate / Session',ph:'₹ Rate…'}]},
-];
-function faculty_canEdit(){return currentUser?.role==='manager';}
-function faculty_init(){
-  if(!D.faculty)D.faculty={live:[],masterclass:[],extra:[]};
-  ['live','masterclass','extra'].forEach(k=>{if(!D.faculty[k])D.faculty[k]=[];});
-  faculty_render();
-}
-function faculty_render(){
-  const canEdit=faculty_canEdit();
-  const badge=document.getElementById('fac-mode-badge');
-  if(badge)badge.innerHTML=canEdit?`<i class="ti ti-edit" style="font-size:10px"></i> Edit access — Himanshu`:`<i class="ti ti-eye" style="font-size:10px"></i> View only`;
-  const wrap=document.getElementById('fac-cards');
-  if(!wrap)return;
-  wrap.innerHTML=FAC_CARDS.map(c=>{
-    const rows=D.faculty[c.key]||[];
-    const rowCls=`fac-row-${c.cols.length}${canEdit?' editable':''}`;
-    const clr=COL[c.color]||COL.gr;
-    const header=`<div class="fac-table-hdr ${rowCls}">
-      ${c.cols.map(col=>`<span>${col.lbl}</span>`).join('')}
-      ${canEdit?'<span></span>':''}
-    </div>`;
-    const bodyRows=rows.length?rows.map((r,idx)=>`
-      <div class="fac-row ${rowCls}">
-        ${c.cols.map(col=>`<input class="fac-inp${col.f==='rate'?' fac-rate':''}" value="${(r[col.f]||'').toString().replace(/"/g,'&quot;')}" placeholder="${col.ph}" ${canEdit?'':'readonly'} onchange="faculty_update('${c.key}',${idx},'${col.f}',this.value)">`).join('')}
-        ${canEdit?`<button class="fac-del" title="Remove" onclick="faculty_remove('${c.key}',${idx})"><i class="ti ti-x" style="font-size:12px"></i></button>`:''}
-      </div>`).join(''):`<div class="fac-empty">No entries yet${canEdit?' — add one below.':'.'}</div>`;
-    const addRow=canEdit?`<div class="fac-add-row">
-      ${c.cols.map(col=>`<input id="fac-add-${c.key}-${col.f}" placeholder="${col.ph}" onkeydown="if(event.key==='Enter')faculty_add('${c.key}')">`).join('')}
-      <button class="fac-add-btn" title="Add faculty" onclick="faculty_add('${c.key}')"><i class="ti ti-plus"></i></button>
-    </div>`:'';
-    return`<div class="fac-card">
-      <div class="fac-card-hdr">
-        <div class="fac-card-icon" style="background:${clr[0]};color:${clr[1]}"><i class="ti ${c.icon}"></i></div>
-        <div class="fac-card-title">${c.title}</div>
-        <div class="fac-card-count">${rows.length}</div>
-      </div>
-      ${header}
-      <div class="fac-body">${bodyRows}</div>
-      ${addRow}
-    </div>`;
-  }).join('');
-}
-function faculty_update(cardKey,idx,field,value){
-  const row=(D.faculty[cardKey]||[])[idx];
-  if(!row||!faculty_canEdit())return;
-  row[field]=value.trim();
-  save();
-}
-function faculty_add(cardKey){
-  if(!faculty_canEdit())return;
-  const card=FAC_CARDS.find(c=>c.key===cardKey);
-  if(!card)return;
-  const entry={};
-  card.cols.forEach(col=>{
-    const inp=document.getElementById(`fac-add-${cardKey}-${col.f}`);
-    entry[col.f]=inp?.value.trim()||'';
-  });
-  if(!entry.name){toast('Faculty name is required','error');return;}
-  if(!D.faculty[cardKey])D.faculty[cardKey]=[];
-  D.faculty[cardKey].push(entry);
-  card.cols.forEach(col=>{
-    const inp=document.getElementById(`fac-add-${cardKey}-${col.f}`);
-    if(inp)inp.value='';
-  });
-  save();
-  faculty_render();
-  toast('Faculty added','success');
-}
-function faculty_remove(cardKey,idx){
-  if(!faculty_canEdit())return;
-  if(!confirm('Remove this faculty entry?'))return;
-  (D.faculty[cardKey]||[]).splice(idx,1);
-  save();
-  faculty_render();
-  toast('Removed','info');
-}
 
 /* ── boot ── */
 applyTheme(currentTheme);
