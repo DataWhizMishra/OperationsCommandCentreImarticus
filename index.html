@@ -1149,6 +1149,8 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
   </div>
   <div class="sec">Leadership avatars</div>
   <div id="leader-avatars"></div>
+  <div class="sec">Leadership batches</div>
+  <div id="leader-batches"></div>
   <div class="sec">Leadership PINs</div>
   <div class="add-form">
     <div class="fgrid">
@@ -1750,6 +1752,9 @@ function initMissing(){
   if(!D.perfHistory)D.perfHistory={};
   if(!D.dgOps)D.dgOps={statuses:{}};
   if(!D.dgOps.statuses)D.dgOps.statuses={};
+  if(!D.headBatches)D.headBatches={HS:[],MD:[]};
+  if(!Array.isArray(D.headBatches.HS))D.headBatches.HS=[];
+  if(!Array.isArray(D.headBatches.MD))D.headBatches.MD=[];
   if(!D.faculty)D.faculty={live:[],masterclass:[],extra:[]};
   if(!D.faculty.live)D.faculty.live=[];
   if(!D.faculty.masterclass)D.faculty.masterclass=[];
@@ -2760,6 +2765,39 @@ function removeMemberBatch(memberId,idx){
   m.batches.splice(idx,1);
   save();renderManage();
 }
+function addHeadBatch(headId){
+  const inp=document.getElementById('hbatch-add-'+headId);
+  const name=inp?.value.trim();if(!name)return;
+  if(!D.headBatches)D.headBatches={HS:[],MD:[]};
+  if(!Array.isArray(D.headBatches[headId]))D.headBatches[headId]=[];
+  D.headBatches[headId].push(name);
+  save();renderManage();
+  toast('Batch added','success');
+}
+function removeHeadBatch(headId,idx){
+  if(!D.headBatches||!Array.isArray(D.headBatches[headId]))return;
+  D.headBatches[headId].splice(idx,1);
+  save();renderManage();
+}
+function renderLeaderBatches(){
+  const el=document.getElementById('leader-batches');
+  if(!el)return;
+  if(!D.headBatches)D.headBatches={HS:[],MD:[]};
+  el.innerHTML=['HS','MD'].map(id=>{
+    const batches=D.headBatches[id]||[];
+    const roleLbl=id==='HS'?'DG Head':'OG Head';
+    return`<div class="card" style="margin-bottom:10px">
+      <div style="font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:8px">${LEADER_NAMES[id]} <span style="font-size:11px;font-weight:400;color:var(--t3)">(${roleLbl})</span></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        ${batches.length?batches.map((b,bi)=>`<span class="ftag f-w" style="display:inline-flex;align-items:center;gap:5px">${b}<i class="ti ti-x" style="font-size:10px;cursor:pointer" onclick="removeHeadBatch('${id}',${bi})"></i></span>`).join(''):`<span style="font-size:11.5px;color:var(--t3)">No batches assigned yet</span>`}
+      </div>
+      <div class="row" style="gap:6px">
+        <input class="inp" id="hbatch-add-${id}" placeholder="Add batch name…" style="flex:1;font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter')addHeadBatch('${id}')">
+        <button class="ibtn" onclick="addHeadBatch('${id}')"><i class="ti ti-plus" style="font-size:12px"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
 function applyDGTaskChecklist(){
   if(currentUser?.role!=='manager')return;
   if(!confirm('Replace the Daily Task Checklist for Aashi, Nishika, Anubha, Ruchika, Pratik and Himanshu with the new DG Daily Task Checklist? This clears their currently-checked tasks for this week (subtasks reset to un-done too).'))return;
@@ -2784,6 +2822,7 @@ function renderManage(){
   if(sel)sel.innerHTML=D.members.map(m=>`<option value="${m.id}">${m.name} (${m.init}) — ${m.team==='og'?'OG':'DG'}</option>`).join('');
   renderAvatarPicker();
   renderLeaderAvatars();
+  renderLeaderBatches();
 }
 
 /* ── avatar editor (Manage → edit anyone's avatar) ── */
@@ -3208,7 +3247,15 @@ function dgops_batchList(){
       rows.push({key:m.id+'__'+bi,batchName:b,mentorId:m.id,mentorName:m.name});
     });
   });
+  ((D.headBatches||{}).HS||[]).forEach((b,bi)=>{
+    rows.push({key:'HS__'+bi,batchName:b,mentorId:'HS',mentorName:'Himanshu Sharma'});
+  });
   return rows;
+}
+function fmtDgopsDate(iso){
+  const d=new Date(iso+'T00:00:00');
+  if(isNaN(d))return iso;
+  return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
 }
 function dgops_init(){
   if(!D.dgOps)D.dgOps={statuses:{}};
@@ -3261,9 +3308,12 @@ function dgops_render(){
         const cells=DGOPS_GROUPS.map(g=>g.cols.map(c=>{
           if(c.type==='date'){
             const v=st[c.key]||'';
+            if(!canEdit){
+              return`<td style="${tdCell};color:${v?'var(--t1)':'var(--t3)'}">${v?fmtDgopsDate(v):'–'}</td>`;
+            }
             return`<td style="${tdCell}"><div class="row" style="gap:3px;justify-content:center;align-items:center">
-              <input type="date" value="${v}" ${dis} style="font-size:11px;padding:2px 3px;border:1px solid var(--bd2);border-radius:5px;background:var(--bg3);color:var(--t1);max-width:126px" onchange="dgops_setDate('${r.key}','${c.key}',this.value)">
-              ${canEdit?`<button class="ibtn" title="Clear date" style="width:20px;height:20px;font-size:11px" onclick="dgops_setDate('${r.key}','${c.key}','')">–</button>`:''}
+              <input type="date" value="${v}" style="font-size:11px;padding:2px 3px;border:1px solid var(--bd2);border-radius:5px;background:var(--bg3);color:var(--t1);max-width:126px" onchange="dgops_setDate('${r.key}','${c.key}',this.value)">
+              <button class="ibtn" title="Clear date" style="width:20px;height:20px;font-size:11px" onclick="dgops_setDate('${r.key}','${c.key}','')">–</button>
             </div></td>`;
           }
           return`<td style="${tdCell}"><input type="checkbox"${st[c.key]?' checked':''} ${dis} onchange="dgops_toggle('${r.key}','${c.key}',this.checked)"></td>`;
