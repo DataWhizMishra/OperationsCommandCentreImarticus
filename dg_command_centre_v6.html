@@ -3176,13 +3176,15 @@ function matGrid_renderStats(){
 
 /* ── DG OPERATIONS ── */
 const DGOPS_GROUPS=[
-  {label:'Feedback',cols:[
+  {label:'Session',cols:[
     {key:'s1',lbl:'Session 1',type:'date'},
     {key:'s2',lbl:'Session 2',type:'date'},
     {key:'sessionCreation',lbl:'Session Creation',type:'check'},
     {key:'facultyAlignment',lbl:'Faculty Alignment',type:'check'},
     {key:'facultyCalBlock',lbl:'Faculty Calendar Block',type:'check'},
     {key:'studentCalBlock',lbl:'Student Calendar Block',type:'check'},
+  ]},
+  {label:'Feedback',cols:[
     {key:'feedback',lbl:'Post Session Feedback to Ins or Faculty',type:'check'},
     {key:'priorityCalling40',lbl:'Priority Calling ≥40%',type:'check'},
   ]},
@@ -3197,8 +3199,6 @@ const DGOPS_GROUPS=[
     {key:'qpApproved',lbl:'Q.P Approved & Sent to Institute for Approval',type:'check'},
     {key:'testKeys',lbl:'Test Keys Released',type:'check'},
   ]},
-  {label:null,cols:[{key:'verify',lbl:'Verify From Our End',type:'check'}]},
-  {label:null,cols:[{key:'uploadProctor',lbl:'Upload on DG Proctor',type:'check'}]},
 ];
 function dgops_canEdit(){return currentUser?.role==='manager';}
 function dgops_batchList(){
