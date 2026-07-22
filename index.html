@@ -1183,6 +1183,21 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 </div>
 </div>
 
+<!-- DG OPERATIONS -->
+<div id="view-dgops" class="view">
+  <div class="mt-hdr">
+    <div class="mt-hdr-title"><i class="ti ti-table" style="font-size:16px;vertical-align:-2px;margin-right:6px;color:#1D9E75"></i>DG Operations</div>
+    <div class="mt-hdr-sub">Per-batch operations checklist — batches come from each mentor's "Batches managing" list on the Manage tab</div>
+  </div>
+  <div id="dgops-wrap" style="overflow-x:auto">
+    <table id="dgops-table" style="border-collapse:collapse;font-size:12px;width:100%"></table>
+  </div>
+  <div id="dgops-empty" class="mt-empty" style="display:none">
+    <i class="ti ti-table" style="font-size:24px;display:block;margin-bottom:8px"></i>
+    No batches yet. Add batches under each mentor's "Batches managing" section on the Manage tab.
+  </div>
+</div>
+
 </div><!-- /.view-wrap -->
 </main>
 </div><!-- /.layout -->
@@ -1235,6 +1250,7 @@ const TABS_MGR=[
   {id:'notes',icon:'ti-notebook',label:'Notes'},
   {id:'mom',icon:'ti-file-text',label:'MOM'},
   {id:'matdelivery',icon:'ti-mail-check',label:'Materials'},
+  {id:'dgops',icon:'ti-table',label:'DG Operations'},
   {id:'manage',icon:'ti-settings',label:'Manage'},
 ];
 const TABS_OG=[
@@ -1256,6 +1272,7 @@ const TABS_RS=[
   {id:'mywork',icon:'ti-user',label:'My Tasks'},
   {id:'notes',icon:'ti-notebook',label:'Notes'},
   {id:'mom',icon:'ti-file-text',label:'MOM'},
+  {id:'dgops',icon:'ti-table',label:'DG Operations'},
 ];
 
 /* ── color maps ── */
@@ -1467,6 +1484,8 @@ function initMissing(){
     });
   });
   if(!D.perfHistory)D.perfHistory={};
+  if(!D.dgOps)D.dgOps={statuses:{}};
+  if(!D.dgOps.statuses)D.dgOps.statuses={};
   if(!D.faculty)D.faculty={live:[],masterclass:[],extra:[]};
   if(!D.faculty.live)D.faculty.live=[];
   if(!D.faculty.masterclass)D.faculty.masterclass=[];
@@ -1733,6 +1752,7 @@ function switchTab(id){
     if(id==='mom')renderMOMs();
     if(id==='manage')renderManage();
     if(id==='matdelivery')matGrid_init();
+    if(id==='dgops')dgops_init();
   }
   if(curView&&curView!==nextView){
     curView.classList.remove('active');
@@ -2031,6 +2051,11 @@ function tog(k,pid,day,i,el,lbl,bar){
   if(el==='team-cl')renderTeamPgrid();
   if(!wasDone&&D.checked[k])showTaskDonePop();
 }
+function syncTaskDoneFromSubtasks(pid,day,i){
+  const task=((D.tasks[pid]||{})[day]||[])[i];
+  if(!task||!Array.isArray(task.subtasks)||!task.subtasks.length)return;
+  D.checked[ckey(pid,day,i)]=task.subtasks.every(s=>s.done);
+}
 function addSubtask(pid,day,i,el,lbl,bar){
   const k=ckey(pid,day,i);
   const inp=document.getElementById('subti-'+k);
@@ -2038,17 +2063,24 @@ function addSubtask(pid,day,i,el,lbl,bar){
   const task=((D.tasks[pid]||{})[day]||[])[i];if(!task)return;
   if(!Array.isArray(task.subtasks))task.subtasks=[];
   task.subtasks.push({t,done:false});
+  syncTaskDoneFromSubtasks(pid,day,i);snapshotPerf(pid);
   save();renderCL(pid,day,el,lbl,bar);
 }
 function toggleSubtask(pid,day,i,si,el,lbl,bar){
   const task=((D.tasks[pid]||{})[day]||[])[i];
   const s=task&&task.subtasks&&task.subtasks[si];if(!s)return;
-  s.done=!s.done;save();renderCL(pid,day,el,lbl,bar);
+  const wasDone=!!D.checked[ckey(pid,day,i)];
+  s.done=!s.done;
+  syncTaskDoneFromSubtasks(pid,day,i);snapshotPerf(pid);
+  save();renderCL(pid,day,el,lbl,bar);
+  if(!wasDone&&D.checked[ckey(pid,day,i)])showTaskDonePop();
 }
 function delSubtask(pid,day,i,si,el,lbl,bar){
   const task=((D.tasks[pid]||{})[day]||[])[i];
   if(!task||!Array.isArray(task.subtasks))return;
-  task.subtasks.splice(si,1);save();renderCL(pid,day,el,lbl,bar);
+  task.subtasks.splice(si,1);
+  syncTaskDoneFromSubtasks(pid,day,i);snapshotPerf(pid);
+  save();renderCL(pid,day,el,lbl,bar);
 }
 let taskDoneTimer=null;
 function showTaskDonePop(){
@@ -2863,6 +2895,71 @@ function matGrid_renderStats(){
     <div class="mt-stat"><div class="mt-stat-l">Sent</div><div class="mt-stat-v" style="color:#1D9E75">${sent}</div></div>
     <div class="mt-stat"><div class="mt-stat-l">Not Sent</div><div class="mt-stat-v" style="color:#E24B4A">${notSent}</div></div>
     <div class="mt-stat"><div class="mt-stat-l">Not Relevant</div><div class="mt-stat-v" style="color:var(--t3)">${nr}</div></div>`;
+}
+
+/* ── DG OPERATIONS ── */
+const DGOPS_COLS=[
+  {key:'s1',lbl:'Session 1'},
+  {key:'s2',lbl:'Session 2'},
+  {key:'feedback',lbl:'Post-Session Feedback to Institute/Faculty'},
+  {key:'preRead',lbl:'Pre Read'},
+  {key:'postRead',lbl:'Post Read'},
+  {key:'sessionCreation',lbl:'Session Creation'},
+  {key:'facultyAlignment',lbl:'Faculty Alignment'},
+  {key:'facultyCalBlock',lbl:'Faculty Calendar Block'},
+  {key:'studentCalBlock',lbl:'Student Calendar Block'},
+  {key:'exams',lbl:'Exams'},
+  {key:'qp',lbl:'Q.P'},
+  {key:'verify',lbl:'Verify From Our End'},
+  {key:'uploadProctor',lbl:'Upload on DG Proctor'},
+  {key:'priorityCalling40',lbl:'Priority Calling ≥40%'},
+];
+function dgops_batchList(){
+  const rows=[];
+  D.members.filter(m=>m.team!=='og').forEach(m=>{
+    (m.batches||[]).forEach((b,bi)=>{
+      rows.push({key:m.id+'__'+bi,batchName:b,mentorId:m.id,mentorName:m.name});
+    });
+  });
+  return rows;
+}
+function dgops_init(){
+  if(!D.dgOps)D.dgOps={statuses:{}};
+  if(!D.dgOps.statuses)D.dgOps.statuses={};
+  dgops_render();
+}
+function dgops_toggle(key,field,checked){
+  if(!D.dgOps.statuses[key])D.dgOps.statuses[key]={};
+  D.dgOps.statuses[key][field]=checked;
+  save();
+}
+function dgops_render(){
+  const rows=dgops_batchList();
+  const table=document.getElementById('dgops-table');
+  const empty=document.getElementById('dgops-empty');
+  if(!table)return;
+  if(!rows.length){
+    table.innerHTML='';
+    if(empty)empty.style.display='block';
+    return;
+  }
+  if(empty)empty.style.display='none';
+  const thCell='padding:9px 10px;border-bottom:1px solid var(--bd);background:var(--bg2);color:var(--t3);font-size:10.5px;text-transform:uppercase;letter-spacing:.3px;text-align:center;white-space:normal;min-width:64px';
+  const tdCell='padding:8px 10px;border-bottom:1px solid var(--bd);text-align:center';
+  table.innerHTML=`
+    <thead><tr>
+      <th style="${thCell};text-align:left;position:sticky;left:0;background:var(--bg2);min-width:170px">Batch</th>
+      ${DGOPS_COLS.map(c=>`<th style="${thCell}">${c.lbl}</th>`).join('')}
+    </tr></thead>
+    <tbody>
+      ${rows.map(r=>{
+        const st=D.dgOps.statuses[r.key]||{};
+        return`<tr>
+          <td style="${tdCell};text-align:left;font-weight:600;color:var(--t1);position:sticky;left:0;background:var(--bg2)">${r.batchName}<div style="font-size:10px;font-weight:400;color:var(--t3)">${r.mentorName}</div></td>
+          ${DGOPS_COLS.map(c=>`<td style="${tdCell}"><input type="checkbox"${st[c.key]?' checked':''} onchange="dgops_toggle('${r.key}','${c.key}',this.checked)"></td>`).join('')}
+        </tr>`;
+      }).join('')}
+    </tbody>`;
 }
 
 
