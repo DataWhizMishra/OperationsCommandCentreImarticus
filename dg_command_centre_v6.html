@@ -2290,7 +2290,7 @@ function renderCL(pid,day,elId,lblId,barId){
 }
 function tog(k,pid,day,i,el,lbl,bar){
   const wasDone=!!D.checked[k];
-  D.checked[k]=!D.checked[k];snapshotPerf(pid);save();renderCL(pid,day,el,lbl,bar);
+  D.checked[k]=!D.checked[k];snapshotPerf(pid);dgops_cascadeFromTask(pid,day,i);save();renderCL(pid,day,el,lbl,bar);
   if(el==='team-cl')renderTeamPgrid();
   if(!wasDone&&D.checked[k])showTaskDonePop();
 }
@@ -2306,7 +2306,7 @@ function addSubtask(pid,day,i,el,lbl,bar){
   const task=((D.tasks[pid]||{})[day]||[])[i];if(!task)return;
   if(!Array.isArray(task.subtasks))task.subtasks=[];
   task.subtasks.push({t,done:false});
-  syncTaskDoneFromSubtasks(pid,day,i);snapshotPerf(pid);
+  syncTaskDoneFromSubtasks(pid,day,i);snapshotPerf(pid);dgops_cascadeFromTask(pid,day,i);
   save();renderCL(pid,day,el,lbl,bar);
 }
 function toggleSubtask(pid,day,i,si,el,lbl,bar){
@@ -2314,7 +2314,7 @@ function toggleSubtask(pid,day,i,si,el,lbl,bar){
   const s=task&&task.subtasks&&task.subtasks[si];if(!s)return;
   const wasDone=!!D.checked[ckey(pid,day,i)];
   s.done=!s.done;
-  syncTaskDoneFromSubtasks(pid,day,i);snapshotPerf(pid);
+  syncTaskDoneFromSubtasks(pid,day,i);snapshotPerf(pid);dgops_cascadeFromTask(pid,day,i);
   save();renderCL(pid,day,el,lbl,bar);
   if(!wasDone&&D.checked[ckey(pid,day,i)])showTaskDonePop();
 }
@@ -2322,7 +2322,7 @@ function delSubtask(pid,day,i,si,el,lbl,bar){
   const task=((D.tasks[pid]||{})[day]||[])[i];
   if(!task||!Array.isArray(task.subtasks))return;
   task.subtasks.splice(si,1);
-  syncTaskDoneFromSubtasks(pid,day,i);snapshotPerf(pid);
+  syncTaskDoneFromSubtasks(pid,day,i);snapshotPerf(pid);dgops_cascadeFromTask(pid,day,i);
   save();renderCL(pid,day,el,lbl,bar);
 }
 let taskDoneTimer=null;
@@ -3229,8 +3229,8 @@ const DGOPS_GROUPS=[
     {key:'priorityCalling40',lbl:'Priority Calling ≥40%',type:'check'},
   ]},
   {label:'Materials',cols:[
-    {key:'preRead',lbl:'Pre Read',type:'check'},
-    {key:'postRead',lbl:'Post Read',type:'check'},
+    {key:'preRead',lbl:'Pre Read',type:'materials'},
+    {key:'postRead',lbl:'Post Read',type:'materials'},
   ]},
   {label:'Exams',cols:[
     {key:'exams',lbl:'Exams',type:'check'},
@@ -3241,6 +3241,31 @@ const DGOPS_GROUPS=[
   ]},
 ];
 function dgops_canEdit(){return currentUser?.role==='manager';}
+function matGrid_statusFor(mentorId,batchName,field){
+  const mg=D.matGrid||{};
+  const list=(mg.batches||{})[mentorId]||[];
+  const b=list.find(x=>x.name===batchName);
+  if(!b)return'';
+  return((mg.statuses||{})[b.id]||{})[field]||'';
+}
+const DGOPS_TASK_LINKS={
+  'Session — per owned batch':['sessionCreation','facultyAlignment','facultyCalBlock','studentCalBlock'],
+  'Priority Calling — RCA of Weekend Sessions':['priorityCalling40'],
+  'RCA & Feedback Emails — by EOD':['feedback'],
+};
+function dgops_cascadeFromTask(pid,day,i){
+  const task=((D.tasks[pid]||{})[day]||[])[i];
+  if(!task)return;
+  const fields=DGOPS_TASK_LINKS[task.t];
+  if(!fields)return;
+  const done=!!D.checked[ckey(pid,day,i)];
+  if(!D.dgOps)D.dgOps={statuses:{}};
+  if(!D.dgOps.statuses)D.dgOps.statuses={};
+  dgops_batchList().filter(r=>r.mentorId===pid).forEach(r=>{
+    if(!D.dgOps.statuses[r.key])D.dgOps.statuses[r.key]={};
+    fields.forEach(f=>{D.dgOps.statuses[r.key][f]=done;});
+  });
+}
 function dgops_batchList(){
   const rows=[];
   D.members.filter(m=>m.team!=='og').forEach(m=>{
@@ -3316,6 +3341,12 @@ function dgops_render(){
               <input type="date" value="${v}" style="font-size:11px;padding:2px 3px;border:1px solid var(--bd2);border-radius:5px;background:var(--bg3);color:var(--t1);max-width:126px" onchange="dgops_setDate('${r.key}','${c.key}',this.value)">
               <button class="ibtn" title="Clear date" style="width:20px;height:20px;font-size:11px" onclick="dgops_setDate('${r.key}','${c.key}','')">–</button>
             </div></td>`;
+          }
+          if(c.type==='materials'){
+            const mst=matGrid_statusFor(r.mentorId,r.batchName,c.key);
+            if(mst==='Not Relevant')return`<td style="${tdCell};color:var(--t3)">–</td>`;
+            const checked=mst==='Sent to the Learners';
+            return`<td style="${tdCell}" title="Synced from Materials tab"><input type="checkbox" disabled${checked?' checked':''}></td>`;
           }
           return`<td style="${tdCell}"><input type="checkbox"${st[c.key]?' checked':''} ${dis} onchange="dgops_toggle('${r.key}','${c.key}',this.checked)"></td>`;
         }).join('')).join('');
