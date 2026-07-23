@@ -928,7 +928,7 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
             <div class="lgrid" id="login-grid-droprecovery"></div>
           </div>
           <div class="org-team-col">
-            <div class="team-label">Data & MIS — reports to Ritesh</div>
+            <div class="team-label">Data/MIS Institute Alliances — reports to Ritesh</div>
             <div class="lgrid" id="login-grid-datamis"></div>
           </div>
         </div>
@@ -1138,7 +1138,7 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
           <option value="dg">DG Team — Batch Mentor</option>
           <option value="og">OG Team — Batch Owner</option>
           <option value="droprecovery">Drop Recovery — reports to Ritesh</option>
-          <option value="datamis">Data & MIS — reports to Ritesh</option>
+          <option value="datamis">Data/MIS Institute Alliances — reports to Ritesh</option>
         </select>
       </div>
       <div><div class="flbl">Initials</div><input class="inp" id="add-init" placeholder="e.g. AB" maxlength="3"></div>
@@ -1166,7 +1166,7 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
   <div id="manage-list-og"></div>
   <div class="sec" style="margin-top:14px">Hierarchy — Drop Recovery (reports to Ritesh)</div>
   <div id="manage-list-droprecovery"></div>
-  <div class="sec" style="margin-top:14px">Hierarchy — Data & MIS (reports to Ritesh)</div>
+  <div class="sec" style="margin-top:14px">Hierarchy — Data/MIS Institute Alliances (reports to Ritesh)</div>
   <div id="manage-list-datamis"></div>
   <div class="divider"></div>
   <div class="sec">Member login PINs</div>
@@ -1290,7 +1290,7 @@ const TEAM_META={
   dg:{label:'DG',fullLabel:'DG Team',defaultRole:'Batch mentor'},
   og:{label:'OG',fullLabel:'OG Team',defaultRole:'Batch Owner'},
   droprecovery:{label:'Drop Recovery',fullLabel:'Drop Recovery',defaultRole:'Drop Recovery'},
-  datamis:{label:'Data & MIS',fullLabel:'Data & MIS',defaultRole:'Data & MIS'},
+  datamis:{label:'Data/MIS Institute Alliances',fullLabel:'Data/MIS Institute Alliances',defaultRole:'Data/MIS Institute Alliances'},
 };
 const TABS_MGR=[
   {id:'overview',icon:'ti-chart-bar',label:'Overview'},
@@ -1677,9 +1677,9 @@ function defLoad(){
       {id:'AL',name:'Aliya',role:'Batch Owner',init:'AL',color:'am',team:'og'},
       {id:'AY',name:'Ayush',role:'Batch Owner',init:'AY',color:'gr',team:'og'},
       {id:'GG',name:'Gungun',role:'Drop Recovery',init:'GG',color:'pu',team:'droprecovery'},
-      {id:'RM',name:'Rohit Mishra',role:'Data & MIS',init:'RM',color:'bl',team:'datamis'},
-      {id:'AR',name:'Akshansh Roy',role:'Data & MIS',init:'AR',color:'am',team:'datamis'},
-      {id:'RW',name:'Rohit Rawat',role:'Data & MIS',init:'RW',color:'gr',team:'datamis'},
+      {id:'RM',name:'Rohit Mishra',role:'Data/MIS Institute Alliances',init:'RM',color:'bl',team:'datamis'},
+      {id:'AR',name:'Akshansh Roy',role:'Data/MIS Institute Alliances',init:'AR',color:'am',team:'datamis'},
+      {id:'RW',name:'Rohit Rawat',role:'Data/MIS Institute Alliances',init:'RW',color:'gr',team:'datamis'},
     ],
     tasks:{
       GG:{},
@@ -1771,9 +1771,9 @@ function initMissing(){
   }
   if(!D.members.some(m=>m.team==='datamis')){
     D.members.push(
-      {id:'RM',name:'Rohit Mishra',role:'Data & MIS',init:'RM',color:'bl',team:'datamis'},
-      {id:'AR',name:'Akshansh Roy',role:'Data & MIS',init:'AR',color:'am',team:'datamis'},
-      {id:'RW',name:'Rohit Rawat',role:'Data & MIS',init:'RW',color:'gr',team:'datamis'},
+      {id:'RM',name:'Rohit Mishra',role:'Data/MIS Institute Alliances',init:'RM',color:'bl',team:'datamis'},
+      {id:'AR',name:'Akshansh Roy',role:'Data/MIS Institute Alliances',init:'AR',color:'am',team:'datamis'},
+      {id:'RW',name:'Rohit Rawat',role:'Data/MIS Institute Alliances',init:'RW',color:'gr',team:'datamis'},
     );
   }
   D.members.forEach(m=>{
@@ -2237,7 +2237,7 @@ function renderTeamFilter(){
   if(resetAllBtn)resetAllBtn.style.display=['manager','ogmanager','ritesh'].includes(currentUser?.role)?'inline-flex':'none';
   if(currentUser?.role!=='ritesh'){row.style.display='none';return;}
   row.style.display='flex';
-  const opts=[['all','All'],['dg','DG Team'],['og','OG Team'],['droprecovery','Drop Recovery'],['datamis','Data & MIS']];
+  const opts=[['all','All'],['dg','DG Team'],['og','OG Team'],['droprecovery','Drop Recovery'],['datamis','Data/MIS Institute Alliances']];
   row.innerHTML=opts.map(([v,l])=>`<button class="dbtn${rsTeamFilter===v?' active':''}" onclick="selTeamFilter('${v}')">${l}</button>`).join('');
 }
 function resetWeekEveryone(){
@@ -2869,7 +2869,7 @@ function renderManage(){
   const targets={dg:document.getElementById('manage-list-dg'),og:document.getElementById('manage-list-og'),droprecovery:document.getElementById('manage-list-droprecovery'),datamis:document.getElementById('manage-list-datamis')};
   const buckets={dg:[],og:[],droprecovery:[],datamis:[]};
   D.members.forEach((m,i)=>{(buckets[m.team]||buckets.dg).push(manageRow(m,i));});
-  const emptyMsg={dg:'No DG batch mentors yet.',og:'No OG batch owners yet.',droprecovery:'No Drop Recovery members yet.',datamis:'No Data & MIS members yet.'};
+  const emptyMsg={dg:'No DG batch mentors yet.',og:'No OG batch owners yet.',droprecovery:'No Drop Recovery members yet.',datamis:'No Data/MIS Institute Alliances members yet.'};
   Object.keys(targets).forEach(k=>{
     if(targets[k])targets[k].innerHTML=buckets[k].join('')||`<div class="empty"><i class="ti ti-users"></i>${emptyMsg[k]}</div>`;
   });
