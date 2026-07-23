@@ -173,7 +173,7 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 .head-card{width:100%;display:flex;flex-direction:column;align-items:center}
 .head-card.dg.sel{border-color:var(--gr);background:var(--grb);box-shadow:0 0 0 1px var(--gr)}
 .head-card.og.sel{border-color:var(--bl);background:var(--blb);box-shadow:0 0 0 1px var(--bl)}
-.org-teams{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.org-teams{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
 .org-team-col{background:var(--bg3);border:.5px solid var(--bd);border-radius:14px;padding:12px 10px}
 .team-label{font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;text-align:center}
 .org-team-col .lgrid{grid-template-columns:repeat(2,1fr);margin-bottom:0}
@@ -923,6 +923,14 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
             <div class="team-label">OG Team — Batch Owners</div>
             <div class="lgrid" id="login-grid-og"></div>
           </div>
+          <div class="org-team-col">
+            <div class="team-label">Drop Recovery — reports to Ritesh</div>
+            <div class="lgrid" id="login-grid-droprecovery"></div>
+          </div>
+          <div class="org-team-col">
+            <div class="team-label">Data & MIS — reports to Ritesh</div>
+            <div class="lgrid" id="login-grid-datamis"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1129,6 +1137,8 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
         <select class="sel" id="add-team" style="width:100%">
           <option value="dg">DG Team — Batch Mentor</option>
           <option value="og">OG Team — Batch Owner</option>
+          <option value="droprecovery">Drop Recovery — reports to Ritesh</option>
+          <option value="datamis">Data & MIS — reports to Ritesh</option>
         </select>
       </div>
       <div><div class="flbl">Initials</div><input class="inp" id="add-init" placeholder="e.g. AB" maxlength="3"></div>
@@ -1154,6 +1164,10 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
   <div id="manage-list-dg"></div>
   <div class="sec" style="margin-top:14px">Hierarchy — OG Team (reports to Mack)</div>
   <div id="manage-list-og"></div>
+  <div class="sec" style="margin-top:14px">Hierarchy — Drop Recovery (reports to Ritesh)</div>
+  <div id="manage-list-droprecovery"></div>
+  <div class="sec" style="margin-top:14px">Hierarchy — Data & MIS (reports to Ritesh)</div>
+  <div id="manage-list-datamis"></div>
   <div class="divider"></div>
   <div class="sec">Member login PINs</div>
   <div class="add-form">
@@ -1272,6 +1286,12 @@ const DAYS=['Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Frida
 const FL={d:'f-d',w:'f-w','15':'f-15',m:'f-m',e:'f-e'};
 const FN={d:'Daily',w:'Weekly','15':'Every 15d',m:'Monthly',e:'As needed'};
 const MTYPES={huddle:'Team huddle',ritesh:'Ritesh Singh',institute:'Institute','1on1':'1-on-1',other:'Other'};
+const TEAM_META={
+  dg:{label:'DG',fullLabel:'DG Team',defaultRole:'Batch mentor'},
+  og:{label:'OG',fullLabel:'OG Team',defaultRole:'Batch Owner'},
+  droprecovery:{label:'Drop Recovery',fullLabel:'Drop Recovery',defaultRole:'Drop Recovery'},
+  datamis:{label:'Data & MIS',fullLabel:'Data & MIS',defaultRole:'Data & MIS'},
+};
 const TABS_MGR=[
   {id:'overview',icon:'ti-chart-bar',label:'Overview'},
   {id:'team',icon:'ti-users',label:'Team'},
@@ -1651,8 +1671,16 @@ function defLoad(){
       {id:'VK',name:'Vikrant',role:'Batch Owner',init:'VK',color:'bl',team:'og'},
       {id:'AL',name:'Aliya',role:'Batch Owner',init:'AL',color:'am',team:'og'},
       {id:'AY',name:'Ayush',role:'Batch Owner',init:'AY',color:'gr',team:'og'},
+      {id:'GG',name:'Gungun',role:'Drop Recovery',init:'GG',color:'pu',team:'droprecovery'},
+      {id:'RM',name:'Rohit Mishra',role:'Data & MIS',init:'RM',color:'bl',team:'datamis'},
+      {id:'AR',name:'Akshansh Roy',role:'Data & MIS',init:'AR',color:'am',team:'datamis'},
+      {id:'RW',name:'Rohit Rawat',role:'Data & MIS',init:'RW',color:'gr',team:'datamis'},
     ],
     tasks:{
+      GG:{},
+      RM:{},
+      AR:{},
+      RW:{},
       AS:JSON.parse(JSON.stringify(DG_MENTOR_TASKS)),
       NI:JSON.parse(JSON.stringify(DG_MENTOR_TASKS)),
       AB:JSON.parse(JSON.stringify(DG_MENTOR_TASKS)),
@@ -1731,8 +1759,20 @@ function initMissing(){
       {id:'AY',name:'Ayush',role:'Batch Owner',init:'AY',color:'gr',team:'og'},
     );
   }
+  if(!D.members.some(m=>m.team==='droprecovery')){
+    D.members.push(
+      {id:'GG',name:'Gungun',role:'Drop Recovery',init:'GG',color:'pu',team:'droprecovery'},
+    );
+  }
+  if(!D.members.some(m=>m.team==='datamis')){
+    D.members.push(
+      {id:'RM',name:'Rohit Mishra',role:'Data & MIS',init:'RM',color:'bl',team:'datamis'},
+      {id:'AR',name:'Akshansh Roy',role:'Data & MIS',init:'AR',color:'am',team:'datamis'},
+      {id:'RW',name:'Rohit Rawat',role:'Data & MIS',init:'RW',color:'gr',team:'datamis'},
+    );
+  }
   D.members.forEach(m=>{
-    if(!D.tasks[m.id])D.tasks[m.id]=JSON.parse(JSON.stringify(D.tasks.AS||{}));
+    if(!D.tasks[m.id])D.tasks[m.id]=['droprecovery','datamis'].includes(m.team)?{}:JSON.parse(JSON.stringify(D.tasks.AS||{}));
     if(!D.memberPins[m.id])D.memberPins[m.id]='0000';
     if(!Array.isArray(m.batches))m.batches=[];
   });
@@ -1791,7 +1831,7 @@ function momTeamOf(){
   if(currentUser.role==='manager')return'dg';
   if(currentUser.role==='ogmanager')return'og';
   const mem=D.members.find(m=>m.id===currentUser.id);
-  return mem&&mem.team==='og'?'og':'dg';
+  return(mem&&mem.team)||'dg';
 }
 function visibleMOMs(){
   const my=momTeamOf();
@@ -1818,8 +1858,10 @@ function showLoginGrid(){
   loginAvatar('RS','pu','Ritesh Sethi');
   loginAvatar('HS','gr','Himanshu Sharma');
   loginAvatar('MD','bl','Mack Donald');
-  document.getElementById('login-grid-dg').innerHTML=D.members.filter(m=>m.team!=='og').map(loginMemberBtn).join('');
+  document.getElementById('login-grid-dg').innerHTML=D.members.filter(m=>m.team==='dg').map(loginMemberBtn).join('');
   document.getElementById('login-grid-og').innerHTML=D.members.filter(m=>m.team==='og').map(loginMemberBtn).join('');
+  document.getElementById('login-grid-droprecovery').innerHTML=D.members.filter(m=>m.team==='droprecovery').map(loginMemberBtn).join('');
+  document.getElementById('login-grid-datamis').innerHTML=D.members.filter(m=>m.team==='datamis').map(loginMemberBtn).join('');
   animateLoginCards();
 }
 
@@ -2086,7 +2128,7 @@ function overviewScopedMembers(){
     {id:'HS',name:'Himanshu Sharma',role:'DG Head',team:'dg'},
     {id:'MD',name:'Mack Donald',role:'OG Head',team:'og'},
   ];
-  if(currentUser.role==='manager')return D.members.filter(m=>m.team!=='og');
+  if(currentUser.role==='manager')return D.members.filter(m=>m.team==='dg');
   if(currentUser.role==='ogmanager')return D.members.filter(m=>m.team==='og');
   return[...D.members,...heads];
 }
@@ -2096,7 +2138,7 @@ function exportOverviewCSV(){
   all.forEach(m=>{
     const wk=computeWindowPerf(m.id,7);
     const mo=computeWindowPerf(m.id,30);
-    rows.push([m.name,m.role||'',m.team==='og'?'OG':'DG',wk.pct===null?'No data':wk.pct+'%',mo.pct===null?'No data':mo.pct+'%',mo.days]);
+    rows.push([m.name,m.role||'',TEAM_META[m.team]?.label||m.team||'',wk.pct===null?'No data':wk.pct+'%',mo.pct===null?'No data':mo.pct+'%',mo.days]);
   });
   const csv=rows.map(r=>r.map(csvEscape).join(',')).join('\r\n');
   downloadCSV(csv,`DG-Overview-Performance-${todayDateStr()}.csv`);
@@ -2112,7 +2154,7 @@ function renderOverview(){
     {id:'MD',name:'Mack Donald',role:'OG Head',init:'MD',color:'bl',team:'og',avatarSeed:(D.leaderAvatars||{}).MD,avatarStyle:(D.leaderAvatarStyles||{}).MD},
   ];
   let all;
-  if(currentUser.role==='manager')all=D.members.filter(m=>m.team!=='og');
+  if(currentUser.role==='manager')all=D.members.filter(m=>m.team==='dg');
   else if(currentUser.role==='ogmanager')all=D.members.filter(m=>m.team==='og');
   else all=[...D.members,...heads];
   let td=0,tt=0;
@@ -2144,7 +2186,7 @@ function renderOverview(){
           const wk=computeWindowPerf(m.id,7);const mo=computeWindowPerf(m.id,30);
           return`<tr>
             <td style="padding:10px 14px;border-bottom:1px solid var(--bd);font-weight:700;color:var(--t1)">${m.name}</td>
-            <td style="padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--t3)">${m.team==='og'?'OG':'DG'}</td>
+            <td style="padding:10px 14px;border-bottom:1px solid var(--bd);color:var(--t3)">${TEAM_META[m.team]?.label||m.team||''}</td>
             <td style="padding:10px 14px;border-bottom:1px solid var(--bd)"><span style="color:${pc2};font-weight:700">${p.done}/${p.total}</span> <span style="color:var(--t3)">(${p.pct}%)</span></td>
             <td style="padding:10px 14px;border-bottom:1px solid var(--bd)">${wk.pct===null?'<span style="color:var(--t3)">No data</span>':wk.pct+'%'}</td>
             <td style="padding:10px 14px;border-bottom:1px solid var(--bd)">${mo.pct===null?'<span style="color:var(--t3)">No data</span>':mo.pct+'%'}</td>
@@ -2180,9 +2222,8 @@ function teamScope(){
 }
 function scopedMembers(){
   const s=teamScope();
-  if(s==='dg')return D.members.filter(m=>m.team!=='og');
-  if(s==='og')return D.members.filter(m=>m.team==='og');
-  return D.members;
+  if(s==='all')return D.members;
+  return D.members.filter(m=>m.team===s);
 }
 function renderTeamFilter(){
   const row=document.getElementById('team-filter-row');
@@ -2190,7 +2231,7 @@ function renderTeamFilter(){
   if(resetAllBtn)resetAllBtn.style.display=['manager','ogmanager','ritesh'].includes(currentUser?.role)?'inline-flex':'none';
   if(currentUser?.role!=='ritesh'){row.style.display='none';return;}
   row.style.display='flex';
-  const opts=[['all','All'],['dg','DG Team'],['og','OG Team']];
+  const opts=[['all','All'],['dg','DG Team'],['og','OG Team'],['droprecovery','Drop Recovery'],['datamis','Data & MIS']];
   row.innerHTML=opts.map(([v,l])=>`<button class="dbtn${rsTeamFilter===v?' active':''}" onclick="selTeamFilter('${v}')">${l}</button>`).join('');
 }
 function resetWeekEveryone(){
@@ -2725,10 +2766,11 @@ function renderMOMs(){
 function manageRow(m,i){
   const c=COL[m.color]||COL.gr;
   const hasPin=D.memberPins&&D.memberPins[m.id]&&D.memberPins[m.id]!=='0000';
-  const otherTeam=m.team==='og'?'dg':'og';
-  const otherLbl=m.team==='og'?'Move to DG (Himanshu)':'Move to OG (Mack)';
   const editing=avatarEditTarget===m.id;
   const batches=Array.isArray(m.batches)?m.batches:[];
+  const teamSelect=`<select class="sel" style="font-size:12.5px;padding:6px 8px;width:auto" onchange="moveTeam(${i},this.value)">
+    ${Object.keys(TEAM_META).map(t=>`<option value="${t}"${m.team===t?' selected':''}>${TEAM_META[t].fullLabel}</option>`).join('')}
+  </select>`;
   return`<div>
     <div class="card" style="display:flex;flex-direction:column;gap:10px">
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -2739,7 +2781,7 @@ function manageRow(m,i){
         <div class="row" style="gap:8px;flex-wrap:wrap">
           <span style="font-size:11px;color:${hasPin?'var(--gr)':'var(--t3)'}"><i class="ti ti-${hasPin?'lock-check':'lock-open'}" style="font-size:12px"></i> ${hasPin?'PIN set':'Default'}</span>
           <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="openAvatarEditor('${m.id}')"><i class="ti ti-edit" style="font-size:12px"></i> Avatar</button>
-          <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="moveTeam(${i},'${otherTeam}')"><i class="ti ti-arrows-exchange" style="font-size:12px"></i> ${otherLbl}</button>
+          ${teamSelect}
           <button class="btn btn-rd" style="font-size:12.5px;padding:6px 11px" onclick="removeMember(${i})"><i class="ti ti-trash" style="font-size:12px"></i> Remove</button>
         </div>
       </div>
@@ -2818,14 +2860,15 @@ function applyDGTaskChecklist(){
   toast('Daily Task Checklist loaded','success');
 }
 function renderManage(){
-  const dgEl=document.getElementById('manage-list-dg');
-  const ogEl=document.getElementById('manage-list-og');
-  const dgHtml=[],ogHtml=[];
-  D.members.forEach((m,i)=>{(m.team==='og'?ogHtml:dgHtml).push(manageRow(m,i));});
-  dgEl.innerHTML=dgHtml.join('')||`<div class="empty"><i class="ti ti-users"></i>No DG batch mentors yet.</div>`;
-  ogEl.innerHTML=ogHtml.join('')||`<div class="empty"><i class="ti ti-users"></i>No OG batch owners yet.</div>`;
+  const targets={dg:document.getElementById('manage-list-dg'),og:document.getElementById('manage-list-og'),droprecovery:document.getElementById('manage-list-droprecovery'),datamis:document.getElementById('manage-list-datamis')};
+  const buckets={dg:[],og:[],droprecovery:[],datamis:[]};
+  D.members.forEach((m,i)=>{(buckets[m.team]||buckets.dg).push(manageRow(m,i));});
+  const emptyMsg={dg:'No DG batch mentors yet.',og:'No OG batch owners yet.',droprecovery:'No Drop Recovery members yet.',datamis:'No Data & MIS members yet.'};
+  Object.keys(targets).forEach(k=>{
+    if(targets[k])targets[k].innerHTML=buckets[k].join('')||`<div class="empty"><i class="ti ti-users"></i>${emptyMsg[k]}</div>`;
+  });
   const sel=document.getElementById('pin-member-sel');
-  if(sel)sel.innerHTML=D.members.map(m=>`<option value="${m.id}">${m.name} (${m.init}) — ${m.team==='og'?'OG':'DG'}</option>`).join('');
+  if(sel)sel.innerHTML=D.members.map(m=>`<option value="${m.id}">${m.name} (${m.init}) — ${TEAM_META[m.team]?.label||m.team}</option>`).join('');
   renderAvatarPicker();
   renderLeaderAvatars();
   renderLeaderBatches();
@@ -2941,14 +2984,14 @@ function pickMemberAvatar(seed){newMemberAvatarSeed=(newMemberAvatarSeed===seed)
 function moveTeam(i,newTeam){
   const m=D.members[i];if(!m)return;
   m.team=newTeam;
-  m.role=newTeam==='og'?'Batch Owner':'Batch mentor';
+  m.role=TEAM_META[newTeam]?.defaultRole||m.role;
   save();renderManage();renderTeamPgrid();matGrid_init();
-  toast(m.name+' moved to '+(newTeam==='og'?'OG':'DG')+' team','success');
+  toast(m.name+' moved to '+(TEAM_META[newTeam]?.fullLabel||newTeam),'success');
 }
 function addMember(){
   const name=document.getElementById('add-name').value.trim();
   const team=document.getElementById('add-team').value;
-  const role=team==='og'?'Batch Owner':'Batch mentor';
+  const role=TEAM_META[team]?.defaultRole||'Member';
   const init=document.getElementById('add-init').value.trim().toUpperCase();
   const color=document.getElementById('add-color').value;
   if(!name||!init)return;
@@ -2956,7 +2999,7 @@ function addMember(){
   const member={id,name,role,init,color,team};
   if(newMemberAvatarSeed){member.avatarSeed=newMemberAvatarSeed;member.avatarStyle=newMemberAvatarStyle;}
   D.members.push(member);
-  D.tasks[id]=JSON.parse(JSON.stringify(D.tasks.AS||{}));
+  D.tasks[id]=['droprecovery','datamis'].includes(team)?{}:JSON.parse(JSON.stringify(D.tasks.AS||{}));
   if(!D.memberPins)D.memberPins={};D.memberPins[id]='0000';
   ['add-name','add-init'].forEach(x=>document.getElementById(x).value='');
   newMemberAvatarSeed=null;newMemberAvatarStyle=DEFAULT_AVATAR_STYLE;AV_PICKER_SEEDS=genAvatarSeeds(12);
@@ -3032,7 +3075,7 @@ function matGrid_init(){
 function matGrid_syncFromCanonical(){
   let changed=false;
   const sources=[
-    ...D.members.filter(m=>m.team!=='og').map(m=>({id:m.id,batches:m.batches||[]})),
+    ...D.members.filter(m=>m.team==='dg').map(m=>({id:m.id,batches:m.batches||[]})),
     {id:'HS',batches:(D.headBatches||{}).HS||[]},
   ];
   sources.forEach(src=>{
@@ -3060,7 +3103,7 @@ function matGrid_getMentorGroups(){
   const result=[];
   const himanshu={id:'HS',name:'Himanshu Sharma',isExtra:false,color:'gr',init:'HS',avatarSeed:(D.leaderAvatars||{}).HS,avatarStyle:(D.leaderAvatarStyles||{}).HS};
   if(!MAT_GRID.hidden.includes('HS'))result.push(himanshu);
-  D.members.filter(m=>m.team!=='og').forEach(m=>{
+  D.members.filter(m=>m.team==='dg').forEach(m=>{
     if(!MAT_GRID.hidden.includes(m.id))
       result.push({id:m.id,name:m.name,isExtra:false,color:m.color,init:m.init});
   });
@@ -3300,7 +3343,7 @@ function dgops_cascadeFromTask(pid,day,i){
 }
 function dgops_batchList(){
   const rows=[];
-  D.members.filter(m=>m.team!=='og').forEach(m=>{
+  D.members.filter(m=>m.team==='dg').forEach(m=>{
     (m.batches||[]).forEach((b,bi)=>{
       rows.push({key:m.id+'__'+bi,batchName:b,mentorId:m.id,mentorName:m.name});
     });
