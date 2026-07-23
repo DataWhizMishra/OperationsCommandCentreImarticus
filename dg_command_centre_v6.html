@@ -1315,6 +1315,11 @@ const TABS_MEM=[
   {id:'mom',icon:'ti-file-text',label:'MOM'},
   {id:'matdelivery',icon:'ti-mail-check',label:'Materials'},
 ];
+const TABS_MEM_NOMAT=[
+  {id:'mywork',icon:'ti-checkbox',label:'My Work'},
+  {id:'notes',icon:'ti-notebook',label:'Notes'},
+  {id:'mom',icon:'ti-file-text',label:'MOM'},
+];
 const TABS_RS=[
   {id:'overview',icon:'ti-chart-bar',label:'Overview'},
   {id:'team',icon:'ti-users',label:'Team'},
@@ -2022,7 +2027,8 @@ function startApp(){
   document.getElementById('side-uname').textContent=currentUser.name;
   const roleLabel=currentUser.role==='manager'?'DG Head':currentUser.role==='ogmanager'?'OG Head':currentUser.role==='ritesh'?'Head of Operations':(currentUser.roleLabel||'Member');
   document.getElementById('side-urole').textContent=roleLabel;
-  const tabs=currentUser.role==='manager'?TABS_MGR:currentUser.role==='ogmanager'?TABS_OG:currentUser.role==='ritesh'?TABS_RS:TABS_MEM;
+  const memTeam=(D.members.find(m=>m.id===currentUser.id)||{}).team;
+  const tabs=currentUser.role==='manager'?TABS_MGR:currentUser.role==='ogmanager'?TABS_OG:currentUser.role==='ritesh'?TABS_RS:(['droprecovery','datamis'].includes(memTeam)?TABS_MEM_NOMAT:TABS_MEM);
   ACTIVE_TABS=tabs;
   document.getElementById('maintabs').innerHTML=tabs.map(t=>`<button class="tab" id="tab-${t.id}" onclick="switchTab('${t.id}')"><i class="ti ${t.icon}"></i>${t.label}</button>`).join('');
   document.getElementById('mom-date').valueAsDate=new Date();
