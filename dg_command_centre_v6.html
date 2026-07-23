@@ -893,24 +893,24 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
       </script>
       <div id="login-org" style="display:none">
         <div class="org-tier-ops">
-          <button class="lmem ops-card" id="lm_RS" onclick="selectProfile('RS','Ritesh Sethi','Head of Operations','RS','pu','ritesh')" style="display:flex;align-items:center;gap:12px;text-align:left;padding:12px 14px">
+          <button class="lmem ops-card" id="lm_RS" onclick="selectProfile('RS','Ritesh Sethi','Operations','RS','pu','ritesh')" style="display:flex;align-items:center;gap:12px;text-align:left;padding:12px 14px">
             <div class="av lav" id="lav_RS" style="flex-shrink:0"></div>
-            <div><div class="lname">Ritesh Sethi</div><div class="lrole">Head of Operations</div></div>
+            <div><div class="lname">Ritesh Sethi</div><div class="lrole">Operations</div></div>
           </button>
         </div>
         <div class="org-connector"></div>
         <div class="org-connector-h"></div>
         <div class="org-tier-heads">
           <div class="org-branch">
-            <button class="lmem head-card dg" id="lm_HS" onclick="selectProfile('HS','Himanshu Sharma','DG Head','HS','gr','manager')">
+            <button class="lmem head-card dg" id="lm_HS" onclick="selectProfile('HS','Himanshu Sharma','Delivery Governance','HS','gr','manager')">
               <div class="av lav" id="lav_HS"></div>
-              <div class="lname">Himanshu Sharma</div><div class="lrole">DG Head</div>
+              <div class="lname">Himanshu Sharma</div><div class="lrole">Delivery Governance</div>
             </button>
           </div>
           <div class="org-branch">
-            <button class="lmem head-card og" id="lm_MD" onclick="selectProfile('MD','Mack Donald','OG Head','MD','bl','ogmanager')">
+            <button class="lmem head-card og" id="lm_MD" onclick="selectProfile('MD','Mack Donald','Onboarding Governance','MD','bl','ogmanager')">
               <div class="av lav" id="lav_MD"></div>
-              <div class="lname">Mack Donald</div><div class="lrole">OG Head</div>
+              <div class="lname">Mack Donald</div><div class="lrole">Onboarding Governance</div>
             </button>
           </div>
         </div>
@@ -1188,8 +1188,8 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
   <div class="sec">Leadership PINs</div>
   <div class="add-form">
     <div class="fgrid">
-      <div><div class="flbl">Himanshu (DG Head) PIN</div><input class="inp" id="pin-manager-val" type="password" placeholder="New PIN…" maxlength="6"></div>
-      <div><div class="flbl">Mack (OG Head) PIN</div><input class="inp" id="pin-ogmanager-val" type="password" placeholder="New PIN…" maxlength="6"></div>
+      <div><div class="flbl">Himanshu (Delivery Governance) PIN</div><input class="inp" id="pin-manager-val" type="password" placeholder="New PIN…" maxlength="6"></div>
+      <div><div class="flbl">Mack (Onboarding Governance) PIN</div><input class="inp" id="pin-ogmanager-val" type="password" placeholder="New PIN…" maxlength="6"></div>
       <div><div class="flbl">Ritesh (Ops Head) PIN</div><input class="inp" id="pin-new" type="password" placeholder="New PIN…" maxlength="6"></div>
     </div>
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
@@ -2025,7 +2025,7 @@ function startApp(){
   const hav=document.getElementById('hdr-av');
   hav.innerHTML=avatarImg(currentUser);
   document.getElementById('side-uname').textContent=currentUser.name;
-  const roleLabel=currentUser.role==='manager'?'DG Head':currentUser.role==='ogmanager'?'OG Head':currentUser.role==='ritesh'?'Head of Operations':(currentUser.roleLabel||'Member');
+  const roleLabel=currentUser.role==='manager'?'Delivery Governance':currentUser.role==='ogmanager'?'Onboarding Governance':currentUser.role==='ritesh'?'Operations':(currentUser.roleLabel||'Member');
   document.getElementById('side-urole').textContent=roleLabel;
   const memTeam=(D.members.find(m=>m.id===currentUser.id)||{}).team;
   const tabs=currentUser.role==='manager'?TABS_MGR:currentUser.role==='ogmanager'?TABS_OG:currentUser.role==='ritesh'?TABS_RS:(['droprecovery','datamis'].includes(memTeam)?TABS_MEM_NOMAT:TABS_MEM);
@@ -2131,8 +2131,8 @@ function downloadCSV(content,filename){
 }
 function overviewScopedMembers(){
   const heads=[
-    {id:'HS',name:'Himanshu Sharma',role:'DG Head',team:'dg'},
-    {id:'MD',name:'Mack Donald',role:'OG Head',team:'og'},
+    {id:'HS',name:'Himanshu Sharma',role:'Delivery Governance',team:'dg'},
+    {id:'MD',name:'Mack Donald',role:'Onboarding Governance',team:'og'},
   ];
   if(currentUser.role==='manager')return D.members.filter(m=>m.team==='dg');
   if(currentUser.role==='ogmanager')return D.members.filter(m=>m.team==='og');
@@ -2156,8 +2156,8 @@ function renderOverview(){
   const day=todayName();
   document.getElementById('ov-today').textContent=day;
   const heads=[
-    {id:'HS',name:'Himanshu Sharma',role:'DG Head',init:'HS',color:'gr',team:'dg',avatarSeed:(D.leaderAvatars||{}).HS,avatarStyle:(D.leaderAvatarStyles||{}).HS},
-    {id:'MD',name:'Mack Donald',role:'OG Head',init:'MD',color:'bl',team:'og',avatarSeed:(D.leaderAvatars||{}).MD,avatarStyle:(D.leaderAvatarStyles||{}).MD},
+    {id:'HS',name:'Himanshu Sharma',role:'Delivery Governance',init:'HS',color:'gr',team:'dg',avatarSeed:(D.leaderAvatars||{}).HS,avatarStyle:(D.leaderAvatarStyles||{}).HS},
+    {id:'MD',name:'Mack Donald',role:'Onboarding Governance',init:'MD',color:'bl',team:'og',avatarSeed:(D.leaderAvatars||{}).MD,avatarStyle:(D.leaderAvatarStyles||{}).MD},
   ];
   let all;
   if(currentUser.role==='manager')all=D.members.filter(m=>m.team==='dg');
@@ -2839,7 +2839,7 @@ function renderLeaderBatches(){
   if(!D.headBatches)D.headBatches={HS:[],MD:[]};
   el.innerHTML=['HS','MD'].map(id=>{
     const batches=D.headBatches[id]||[];
-    const roleLbl=id==='HS'?'DG Head':'OG Head';
+    const roleLbl=id==='HS'?'Delivery Governance':'Onboarding Governance';
     return`<div class="card" style="margin-bottom:10px">
       <div style="font-size:13.5px;font-weight:700;color:var(--t1);margin-bottom:8px">${LEADER_NAMES[id]} <span style="font-size:11px;font-weight:400;color:var(--t3)">(${roleLbl})</span></div>
       <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
@@ -3029,12 +3029,12 @@ function setMemberPin(){
 }
 function setManagerPin(){
   const v=document.getElementById('pin-manager-val').value.trim();if(!v)return;
-  D.managerPin=v;save();toast('Himanshu (DG Head) PIN updated','success');
+  D.managerPin=v;save();toast('Himanshu (Delivery Governance) PIN updated','success');
   document.getElementById('pin-manager-val').value='';
 }
 function setOgManagerPin(){
   const v=document.getElementById('pin-ogmanager-val').value.trim();if(!v)return;
-  D.ogManagerPin=v;save();toast('Mack (OG Head) PIN updated','success');
+  D.ogManagerPin=v;save();toast('Mack (Onboarding Governance) PIN updated','success');
   document.getElementById('pin-ogmanager-val').value='';
 }
 function setPin(){
