@@ -1711,6 +1711,26 @@ function updateSyncStatus(txt,col){
 }
 function fetchTimeout(ms){return new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms));}
 const DATA_CACHE_KEY='dg-data-cache';
+// Snapshot of the state we last know to be synced to Firestore (deep clone).
+// save() diffs the live D against this and writes only the fields that
+// actually changed, instead of blindly overwriting the whole shared
+// document — otherwise a tab left open for a while re-saves its stale copy
+// of everything on its next edit and silently erases changes (e.g. a
+// teammate's completed/checked task) made by other open tabs in between.
+let lastSyncedD=null;
+function diffToUpdates(oldObj,newObj,prefix,out){
+  const keys=new Set([...Object.keys(oldObj||{}),...Object.keys(newObj||{})]);
+  keys.forEach(k=>{
+    const path=prefix?prefix+'.'+k:k;
+    if(!(k in newObj)){out[path]=firebase.firestore.FieldValue.delete();return;}
+    const nv=newObj[k],ov=oldObj?oldObj[k]:undefined;
+    if(nv&&typeof nv==='object'&&!Array.isArray(nv)&&ov&&typeof ov==='object'&&!Array.isArray(ov)){
+      diffToUpdates(ov,nv,path,out);
+    }else if(JSON.stringify(nv)!==JSON.stringify(ov)){
+      out[path]=nv;
+    }
+  });
+}
 async function loadDataFromSheets(){
   // Stale-while-revalidate: render instantly from the last-known-good cache
   // (if any) so the UI never sits on a spinner, then refresh in the background.
@@ -1731,6 +1751,7 @@ async function loadDataFromSheets(){
       if(!usedCache){D=defLoad();await save();}
     }else{
       D=cd;
+      lastSyncedD=JSON.parse(JSON.stringify(cd));
       lsSet(DATA_CACHE_KEY,JSON.stringify(cd));
     }
     updateSyncStatus('Synced','#1D9E75');
@@ -1745,7 +1766,25 @@ async function save(){
   try{
     await waitForFirebase(8000);
     const clean=JSON.parse(JSON.stringify(D)); // strip undefined values Firestore would reject
-    await Promise.race([DATA_DOC.set(clean),fetchTimeout(12000)]);
+    if(!lastSyncedD){
+      // No known-synced base yet (e.g. this tab only ever loaded from local
+      // cache while offline) — try one fresh server read so we don't clobber
+      // changes made elsewhere; fall back to a full write if that's not possible.
+      try{
+        const snap=await Promise.race([DATA_DOC.get({source:'server'}),fetchTimeout(8000)]);
+        if(snap.exists)lastSyncedD=snap.data();
+      }catch(e){}
+    }
+    if(!lastSyncedD){
+      await Promise.race([DATA_DOC.set(clean),fetchTimeout(12000)]);
+    }else{
+      const updates={};
+      diffToUpdates(lastSyncedD,clean,'',updates);
+      if(Object.keys(updates).length){
+        await Promise.race([DATA_DOC.update(updates),fetchTimeout(12000)]);
+      }
+    }
+    lastSyncedD=clean;
     lsSet(DATA_CACHE_KEY,JSON.stringify(D));
     updateSyncStatus('Synced','#1D9E75');
     toast('Saved','success');
