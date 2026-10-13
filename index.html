@@ -168,7 +168,7 @@ body,.hdr,.sidebar,.card,.stat-card,.add-form,.tab,.lbox,.note-card,.mtg-card,.m
 .org-connector-h{position:relative;height:16px;margin:0 auto 0;max-width:340px}
 .org-connector-h::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:var(--bd3)}
 .org-connector-h::after{content:'';position:absolute;top:0;left:50%;width:1px;height:16px;background:var(--bd3)}
-.org-tier-heads{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 18px;position:relative}
+.org-tier-heads{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:0 0 18px;position:relative}
 .org-branch{display:flex;flex-direction:column;align-items:center;gap:0}
 .head-card{width:100%;display:flex;flex-direction:column;align-items:center}
 .head-card.dg.sel{border-color:var(--gr);background:var(--grb);box-shadow:0 0 0 1px var(--gr)}
@@ -924,11 +924,11 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
             <div class="lgrid" id="login-grid-og"></div>
           </div>
           <div class="org-team-col">
-            <div class="team-label">Drop Recovery — reports to Ritesh</div>
+            <div class="team-label" id="login-label-droprecovery">Drop Recovery — reports to Ritesh</div>
             <div class="lgrid" id="login-grid-droprecovery"></div>
           </div>
           <div class="org-team-col">
-            <div class="team-label">Data/MIS Institute Alliances — reports to Ritesh</div>
+            <div class="team-label" id="login-label-datamis">Data/MIS Institute Alliances — reports to Ritesh</div>
             <div class="lgrid" id="login-grid-datamis"></div>
           </div>
         </div>
@@ -1129,6 +1129,25 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
     <div style="font-size:12px;color:var(--t3);margin-bottom:10px">Replaces the Team/My Tasks checklist for Aashi, Nishika, Anubha, Ruchika, Pratik and Himanshu with the latest checklist (tasks + subtasks). Clears their currently-checked state for this week.</div>
     <button class="btn btn-gr" onclick="applyDGTaskChecklist()"><i class="ti ti-refresh"></i> Load Daily Task Checklist</button>
   </div>
+  <div class="sec">Leadership — managers &amp; seniors</div>
+  <div id="manage-leaders"></div>
+  <div class="add-form">
+    <div class="add-form-title">Add a manager / senior</div>
+    <div class="fgrid">
+      <div><div class="flbl">Name</div><input class="inp" id="lead-name" placeholder="Full name"></div>
+      <div><div class="flbl">Designation <span style="color:var(--t3)">(optional)</span></div><input class="inp" id="lead-role" placeholder="e.g. Senior Batch Mentor"></div>
+      <div><div class="flbl">Leads team</div><select class="sel" id="lead-team" style="width:100%"></select></div>
+      <div><div class="flbl">Initials</div><input class="inp" id="lead-init" placeholder="e.g. AB" maxlength="3"></div>
+      <div><div class="flbl">Colour</div>
+        <select class="sel" id="lead-color" style="width:100%">
+          <option value="bl">Blue</option><option value="pu">Purple</option>
+          <option value="am">Amber</option><option value="pk">Pink</option>
+          <option value="gr">Teal</option><option value="rd">Coral</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-gr" onclick="addSenior()" style="width:100%;margin-top:4px"><i class="ti ti-plus"></i> Add manager / senior</button>
+  </div>
   <div class="sec">Add team member</div>
   <div class="add-form">
     <div class="fgrid">
@@ -1161,13 +1180,13 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
     </div>
     <button class="btn btn-gr" onclick="addMember()" style="width:100%;margin-top:4px"><i class="ti ti-plus"></i> Add member</button>
   </div>
-  <div class="sec">Hierarchy — DG Team (reports to Himanshu)</div>
+  <div class="sec" id="manage-head-dg">Hierarchy — DG Team (reports to Himanshu)</div>
   <div id="manage-list-dg"></div>
-  <div class="sec" style="margin-top:14px">Hierarchy — OG Team (reports to Mack)</div>
+  <div class="sec" id="manage-head-og" style="margin-top:14px">Hierarchy — OG Team (reports to Mack)</div>
   <div id="manage-list-og"></div>
-  <div class="sec" style="margin-top:14px">Hierarchy — Drop Recovery (reports to Ritesh)</div>
+  <div class="sec" id="manage-head-droprecovery" style="margin-top:14px">Hierarchy — Drop Recovery (reports to Ritesh)</div>
   <div id="manage-list-droprecovery"></div>
-  <div class="sec" style="margin-top:14px">Hierarchy — Data/MIS Institute Alliances (reports to Ritesh)</div>
+  <div class="sec" id="manage-head-datamis" style="margin-top:14px">Hierarchy — Data/MIS Institute Alliances (reports to Ritesh)</div>
   <div id="manage-list-datamis"></div>
   <div class="divider"></div>
   <div class="sec">Member login PINs</div>
@@ -1329,6 +1348,29 @@ const TABS_RS=[
   {id:'mom',icon:'ti-file-text',label:'MOM'},
   {id:'dgops',icon:'ti-table',label:'DG Operations'},
 ];
+
+/* ── leadership: built-in heads + seniors added/promoted by Himanshu (D.seniors) ── */
+const LEADER_DEFS={
+  RS:{id:'RS',name:'Ritesh Sethi',role:'Operations',init:'RS',color:'pu',leads:['droprecovery','datamis']},
+  HS:{id:'HS',name:'Himanshu Sharma',role:'Delivery Governance',init:'HS',color:'gr',leads:['dg']},
+  MD:{id:'MD',name:'Mack Donald',role:'Onboarding Governance',init:'MD',color:'bl',leads:['og']},
+};
+function leaderHidden(id){return id!=='HS'&&(D.hiddenLeaders||[]).includes(id);}
+function seniorsList(){return Array.isArray(D.seniors)?D.seniors:[];}
+function teamSeniors(team){return seniorsList().filter(s=>s.team===team);}
+function findPerson(id){return D.members.find(x=>x.id===id)||seniorsList().find(x=>x.id===id);}
+function headCards(){
+  const heads=['HS','MD'].filter(id=>!leaderHidden(id)).map(id=>{
+    const L=LEADER_DEFS[id];
+    return{id,name:L.name,role:L.role,init:L.init,color:L.color,team:L.leads[0],avatarSeed:(D.leaderAvatars||{})[id],avatarStyle:(D.leaderAvatarStyles||{})[id]};
+  });
+  return[...heads,...seniorsList()];
+}
+function teamLeadNames(team){
+  const names=Object.values(LEADER_DEFS).filter(L=>L.leads.includes(team)&&!leaderHidden(L.id)).map(L=>L.name.split(' ')[0]);
+  teamSeniors(team).forEach(s=>names.push(s.name.split(' ')[0]));
+  return names;
+}
 
 /* ── color maps ── */
 const COL_DARK={bl:['rgba(91,147,255,.15)','#5b93ff'],pu:['rgba(157,141,255,.15)','#9d8dff'],am:['rgba(255,190,61,.14)','#ffbe3d'],pk:['rgba(255,110,166,.15)','#ff6ea6'],gr:['rgba(23,201,140,.13)','#17c98c'],rd:['rgba(255,93,98,.14)','#ff5d62']};
@@ -1796,7 +1838,8 @@ function initMissing(){
   if(!D.managerPin)D.managerPin='1234';
   if(!D.ogManagerPin)D.ogManagerPin='1234';
   D.members.forEach(m=>{if(!m.team)m.team='dg';});
-  if(!D.members.some(m=>m.team==='og')){
+  if(!D.seededTeams)D.seededTeams={};
+  if(!D.seededTeams.og&&!D.members.some(m=>m.team==='og')){
     D.members.push(
       {id:'AM',name:'Aasmeen',role:'Batch Owner',init:'AM',color:'pk',team:'og'},
       {id:'VK',name:'Vikrant',role:'Batch Owner',init:'VK',color:'bl',team:'og'},
@@ -1804,12 +1847,12 @@ function initMissing(){
       {id:'AY',name:'Ayush',role:'Batch Owner',init:'AY',color:'gr',team:'og'},
     );
   }
-  if(!D.members.some(m=>m.team==='droprecovery')){
+  if(!D.seededTeams.droprecovery&&!D.members.some(m=>m.team==='droprecovery')){
     D.members.push(
       {id:'GG',name:'Gungun',role:'Drop Recovery',init:'GG',color:'pu',team:'droprecovery'},
     );
   }
-  if(!D.members.some(m=>m.team==='datamis')){
+  if(!D.seededTeams.datamis&&!D.members.some(m=>m.team==='datamis')){
     D.members.push(
       {id:'RM',name:'Rohit Mishra',role:'Data/MIS Institute Alliances',init:'RM',color:'bl',team:'datamis'},
       {id:'AR',name:'Akshansh Roy',role:'Data/MIS Institute Alliances',init:'AR',color:'am',team:'datamis'},
@@ -1820,6 +1863,15 @@ function initMissing(){
     if(!D.tasks[m.id])D.tasks[m.id]=['droprecovery','datamis'].includes(m.team)?{}:JSON.parse(JSON.stringify(D.tasks.AS||{}));
     if(!D.memberPins[m.id])D.memberPins[m.id]='0000';
     if(!Array.isArray(m.batches))m.batches=[];
+  });
+  // default teams are seeded once; after that Himanshu may empty a team without it being re-filled
+  D.seededTeams.og=D.seededTeams.droprecovery=D.seededTeams.datamis=true;
+  if(!Array.isArray(D.seniors))D.seniors=[];
+  if(!Array.isArray(D.hiddenLeaders))D.hiddenLeaders=[];
+  D.seniors.forEach(s=>{
+    if(!D.tasks[s.id])D.tasks[s.id]={};
+    if(!D.memberPins[s.id])D.memberPins[s.id]='0000';
+    if(!Array.isArray(s.batches))s.batches=[];
   });
   if(!D.tasks.MD)D.tasks.MD=JSON.parse(JSON.stringify(D.tasks.HS||D.tasks.AS||{}));
   Object.keys(D.tasks).forEach(pid=>{
@@ -1875,6 +1927,7 @@ function momTeamOf(){
   if(currentUser.role==='ritesh')return'ritesh';
   if(currentUser.role==='manager')return'dg';
   if(currentUser.role==='ogmanager')return'og';
+  if(currentUser.role==='senior')return currentUser.team;
   const mem=D.members.find(m=>m.id===currentUser.id);
   return(mem&&mem.team)||'dg';
 }
@@ -1896,6 +1949,29 @@ function loginMemberBtn(m){
     <div class="lname">${esc(m.name)}</div><div class="lrole">${esc(m.role)}</div>
   </button>`;
 }
+function loginSeniorBtn(s){
+  const c=COL[s.color]||COL.gr;
+  return`<div class="org-branch senior-branch"><button class="lmem head-card" id="lm_${s.id}" onclick="selectProfile('${s.id}','${jsq(s.name)}','${jsq(s.role)}','${jsq(s.init)}','${s.color}','senior')">
+    <div class="av lav" style="background:${c[0]};color:${c[1]}">${avatarImg(s)}</div>
+    <div class="lname">${esc(s.name)}</div><div class="lrole">${esc(s.role)}</div>
+  </button></div>`;
+}
+function renderLoginLeaders(){
+  const rsHidden=leaderHidden('RS');
+  document.querySelectorAll('#login-org .org-tier-ops,#login-org .org-connector,#login-org .org-connector-h').forEach(el=>{el.style.display=rsHidden?'none':'';});
+  const md=document.getElementById('lm_MD');
+  if(md)md.closest('.org-branch').style.display=leaderHidden('MD')?'none':'';
+  const tier=document.querySelector('#login-org .org-tier-heads');
+  if(tier){
+    tier.querySelectorAll('.senior-branch').forEach(x=>x.remove());
+    tier.insertAdjacentHTML('beforeend',seniorsList().map(loginSeniorBtn).join(''));
+  }
+  ['droprecovery','datamis'].forEach(t=>{
+    const el=document.getElementById('login-label-'+t);if(!el)return;
+    const names=teamLeadNames(t);
+    el.textContent=TEAM_META[t].fullLabel+(names.length?' — reports to '+names.join(' & '):'');
+  });
+}
 function showLoginGrid(){
   document.getElementById('login-loading').style.display='none';
   const stuckHelp=document.getElementById('login-stuck-help');if(stuckHelp)stuckHelp.style.display='none';
@@ -1903,6 +1979,7 @@ function showLoginGrid(){
   loginAvatar('RS','pu','Ritesh Sethi');
   loginAvatar('HS','gr','Himanshu Sharma');
   loginAvatar('MD','bl','Mack Donald');
+  renderLoginLeaders();
   document.getElementById('login-grid-dg').innerHTML=D.members.filter(m=>m.team==='dg').map(loginMemberBtn).join('');
   document.getElementById('login-grid-og').innerHTML=D.members.filter(m=>m.team==='og').map(loginMemberBtn).join('');
   document.getElementById('login-grid-droprecovery').innerHTML=D.members.filter(m=>m.team==='droprecovery').map(loginMemberBtn).join('');
@@ -2007,7 +2084,7 @@ function selectProfile(id,name,role,init,color,uRole){
   document.getElementById('login-step2').style.display='block';
   const c=COL[color]||COL.gr;
   const av=document.getElementById('lpinav');
-  const member=D.members.find(x=>x.id===id);
+  const member=findPerson(id);
   const seed=member?member.avatarSeed:(D.leaderAvatars||{})[id];
   const style=member?member.avatarStyle:(D.leaderAvatarStyles||{})[id];
   av.innerHTML=avatarImg({name,avatarSeed:seed,avatarStyle:style});av.style.background=c[0];av.style.color=c[1];
@@ -2032,11 +2109,13 @@ function doLogin(){
   const correct=isManager?(D.managerPin||'1234'):isOg?(D.ogManagerPin||'1234'):isRitesh?(D.pin||'1234'):(D.memberPins||{})[loginSelId];
   if(pin===correct){
     const av=document.getElementById('lpinav')._data||{};
-    const role=isManager?'manager':isOg?'ogmanager':isRitesh?'ritesh':'member';
-    const memberRec=D.members.find(m=>m.id===loginSelId);
+    const senior=seniorsList().find(s=>s.id===loginSelId);
+    const role=isManager?'manager':isOg?'ogmanager':isRitesh?'ritesh':senior?'senior':'member';
+    const memberRec=findPerson(loginSelId);
     const avatarSeed=memberRec?memberRec.avatarSeed:(D.leaderAvatars||{})[loginSelId];
     const avatarStyle=memberRec?memberRec.avatarStyle:(D.leaderAvatarStyles||{})[loginSelId];
     currentUser={id:loginSelId,name:document.getElementById('lpinname').textContent,role,roleLabel:document.getElementById('lpinrole').textContent,init:av.init||loginSelId,color:av.color||'gr',avatarSeed,avatarStyle};
+    if(senior)currentUser.team=senior.team;
     startApp();
   }else{
     const err=document.getElementById('login-err');
@@ -2068,11 +2147,11 @@ function startApp(){
   const roleLabel=currentUser.role==='manager'?'Delivery Governance':currentUser.role==='ogmanager'?'Onboarding Governance':currentUser.role==='ritesh'?'Operations':(currentUser.roleLabel||'Member');
   document.getElementById('side-urole').textContent=roleLabel;
   const memTeam=(D.members.find(m=>m.id===currentUser.id)||{}).team;
-  const tabs=currentUser.role==='manager'?TABS_MGR:currentUser.role==='ogmanager'?TABS_OG:currentUser.role==='ritesh'?TABS_RS:(['droprecovery','datamis'].includes(memTeam)?TABS_MEM_NOMAT:TABS_MEM);
+  const tabs=currentUser.role==='manager'?TABS_MGR:(currentUser.role==='ogmanager'||currentUser.role==='senior')?TABS_OG:currentUser.role==='ritesh'?TABS_RS:(['droprecovery','datamis'].includes(memTeam)?TABS_MEM_NOMAT:TABS_MEM);
   ACTIVE_TABS=tabs;
   document.getElementById('maintabs').innerHTML=tabs.map(t=>`<button class="tab" id="tab-${t.id}" onclick="switchTab('${t.id}')"><i class="ti ${t.icon}"></i>${t.label}</button>`).join('');
   document.getElementById('mom-date').valueAsDate=new Date();
-  rsTeamFilter=currentUser.role==='manager'?'dg':currentUser.role==='ogmanager'?'og':'all';
+  rsTeamFilter=currentUser.role==='manager'?'dg':currentUser.role==='ogmanager'?'og':currentUser.role==='senior'?currentUser.team:'all';
   tPerson=scopedMembers()[0]?.id||D.members[0]?.id||'AS';
   mwDay=todayName();tDay=todayName();
   applyTheme(currentTheme);
@@ -2143,7 +2222,7 @@ function snapshotPerf(pid){
 }
 function snapshotAllPerf(){
   if(!currentUser||!D.members)return;
-  const ids=[...D.members.map(m=>m.id),'HS','MD'];
+  const ids=[...D.members.map(m=>m.id),'HS','MD',...seniorsList().map(s=>s.id)];
   let changed=false;
   ids.forEach(id=>{if(snapshotPerf(id))changed=true;});
   if(changed)save();
@@ -2170,12 +2249,10 @@ function downloadCSV(content,filename){
   document.body.removeChild(a);URL.revokeObjectURL(url);
 }
 function overviewScopedMembers(){
-  const heads=[
-    {id:'HS',name:'Himanshu Sharma',role:'Delivery Governance',team:'dg'},
-    {id:'MD',name:'Mack Donald',role:'Onboarding Governance',team:'og'},
-  ];
-  if(currentUser.role==='manager')return D.members.filter(m=>m.team==='dg');
-  if(currentUser.role==='ogmanager')return D.members.filter(m=>m.team==='og');
+  const heads=headCards();
+  if(currentUser.role==='manager')return[...D.members.filter(m=>m.team==='dg'),...teamSeniors('dg')];
+  if(currentUser.role==='ogmanager')return[...D.members.filter(m=>m.team==='og'),...teamSeniors('og')];
+  if(currentUser.role==='senior')return D.members.filter(m=>m.team===currentUser.team);
   return[...D.members,...heads];
 }
 function exportOverviewCSV(){
@@ -2195,14 +2272,7 @@ function exportOverviewCSV(){
 function renderOverview(){
   const day=todayName();
   document.getElementById('ov-today').textContent=day;
-  const heads=[
-    {id:'HS',name:'Himanshu Sharma',role:'Delivery Governance',init:'HS',color:'gr',team:'dg',avatarSeed:(D.leaderAvatars||{}).HS,avatarStyle:(D.leaderAvatarStyles||{}).HS},
-    {id:'MD',name:'Mack Donald',role:'Onboarding Governance',init:'MD',color:'bl',team:'og',avatarSeed:(D.leaderAvatars||{}).MD,avatarStyle:(D.leaderAvatarStyles||{}).MD},
-  ];
-  let all;
-  if(currentUser.role==='manager')all=D.members.filter(m=>m.team==='dg');
-  else if(currentUser.role==='ogmanager')all=D.members.filter(m=>m.team==='og');
-  else all=[...D.members,...heads];
+  const all=overviewScopedMembers();
   let td=0,tt=0;
   all.forEach(m=>{const p=progInfo(m.id,day);td+=p.done;tt+=p.total;});
   const pct=tt?pc(td/tt*100):0;
@@ -2263,18 +2333,21 @@ function teamScope(){
   if(!currentUser)return'all';
   if(currentUser.role==='manager')return'dg';
   if(currentUser.role==='ogmanager')return'og';
+  if(currentUser.role==='senior')return currentUser.team;
   if(currentUser.role==='ritesh')return rsTeamFilter;
   return'all';
 }
 function scopedMembers(){
   const s=teamScope();
-  if(s==='all')return D.members;
-  return D.members.filter(m=>m.team===s);
+  // seniors appear under their team for the people above them (not in their own list)
+  const seniors=currentUser?.role==='senior'?[]:seniorsList();
+  if(s==='all')return[...D.members,...seniors];
+  return[...D.members.filter(m=>m.team===s),...seniors.filter(m=>m.team===s)];
 }
 function renderTeamFilter(){
   const row=document.getElementById('team-filter-row');
   const resetAllBtn=document.getElementById('team-reset-all-btn');
-  if(resetAllBtn)resetAllBtn.style.display=['manager','ogmanager','ritesh'].includes(currentUser?.role)?'inline-flex':'none';
+  if(resetAllBtn)resetAllBtn.style.display=['manager','ogmanager','ritesh','senior'].includes(currentUser?.role)?'inline-flex':'none';
   if(currentUser?.role!=='ritesh'){row.style.display='none';return;}
   row.style.display='flex';
   const opts=[['all','All'],['dg','DG Team'],['og','OG Team'],['droprecovery','Drop Recovery'],['datamis','Data/MIS Institute Alliances']];
@@ -2399,7 +2472,7 @@ function renderCL(pid,day,elId,lblId,barId){
   const bar=document.getElementById(barId);
   bar.style.width=pct+'%';bar.style.background=pcolor(pct);
   document.getElementById(lblId).textContent=done+' of '+tasks.length+' done ('+pct+'%)';
-  if(['manager','ogmanager','ritesh'].includes(currentUser?.role))renderOverview();
+  if(['manager','ogmanager','ritesh','senior'].includes(currentUser?.role))renderOverview();
 }
 function tog(k,pid,day,i,el,lbl,bar){
   const wasDone=!!D.checked[k];
@@ -2832,6 +2905,7 @@ function manageRow(m,i){
           <button class="ibtn" title="Move up" onclick="reorderMember('${m.id}',-1)"${pos<=0?' disabled style="opacity:.35"':''}><i class="ti ti-arrow-up" style="font-size:12px"></i></button>
           <button class="ibtn" title="Move down" onclick="reorderMember('${m.id}',1)"${pos>=sameTeam.length-1?' disabled style="opacity:.35"':''}><i class="ti ti-arrow-down" style="font-size:12px"></i></button>
           <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="openMemberEditor('${m.id}')"><i class="ti ti-id-badge-2" style="font-size:12px"></i> Edit</button>
+          <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="promoteMember('${m.id}')"><i class="ti ti-star" style="font-size:12px"></i> Promote</button>
           <span style="font-size:11px;color:${hasPin?'var(--gr)':'var(--t3)'}"><i class="ti ti-${hasPin?'lock-check':'lock-open'}" style="font-size:12px"></i> ${hasPin?'PIN set':'Default'}</span>
           <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="openAvatarEditor('${m.id}')"><i class="ti ti-edit" style="font-size:12px"></i> Avatar</button>
           ${teamSelect}
@@ -2895,17 +2969,182 @@ function reorderMember(id,dir){
   [D.members[i],D.members[j]]=[D.members[j],D.members[i]];
   save();renderManage();renderTeamPgrid();matGrid_init();showLoginGrid();
 }
+/* ── leadership management (Manage → Leadership; Himanshu only) ── */
+let seniorEditTarget=null;
+function personBatchesBlock(m){
+  const batches=Array.isArray(m.batches)?m.batches:[];
+  return`<div style="border-top:.5px solid var(--bd);padding-top:9px">
+        <div style="font-size:10.5px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Batches managing / mentoring</div>
+        <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px">
+          ${batches.length?batches.map((b,bi)=>`<span class="ftag f-w" style="display:inline-flex;align-items:center;gap:5px">${esc(b)}<i class="ti ti-x" style="font-size:10px;cursor:pointer" onclick="removeMemberBatch('${m.id}',${bi})"></i></span>`).join(''):`<span style="font-size:11.5px;color:var(--t3)">No batches assigned yet</span>`}
+        </div>
+        <div class="row" style="gap:6px">
+          <input class="inp" id="mbatch-add-${m.id}" placeholder="Add batch name…" style="flex:1;font-size:13px;padding:7px 10px" onkeydown="if(event.key==='Enter')addMemberBatch('${m.id}')">
+          <button class="ibtn" onclick="addMemberBatch('${m.id}')"><i class="ti ti-plus" style="font-size:12px"></i></button>
+        </div>
+      </div>`;
+}
+function teamOptions(sel){return Object.keys(TEAM_META).map(t=>`<option value="${t}"${sel===t?' selected':''}>${TEAM_META[t].fullLabel}</option>`).join('');}
+function renderLeaders(){
+  const el=document.getElementById('manage-leaders');if(!el)return;
+  const btn='font-size:12.5px;padding:6px 11px';
+  const builtIn=['RS','HS','MD'].map(id=>{
+    const L=LEADER_DEFS[id];const c=COL[L.color]||COL.gr;const hidden=leaderHidden(id);
+    const leads=L.leads.map(t=>TEAM_META[t].fullLabel).join(', ');
+    const action=id==='HS'?`<span class="ftag f-w">Master admin</span>`
+      :hidden?`<button class="btn btn-ghost" style="${btn}" onclick="restoreLeader('${id}')"><i class="ti ti-restore" style="font-size:12px"></i> Restore</button>`
+      :`<button class="btn btn-rd" style="${btn}" onclick="removeLeader('${id}')"><i class="ti ti-trash" style="font-size:12px"></i> Remove</button>`;
+    return`<div class="card row" style="justify-content:space-between;flex-wrap:wrap;gap:8px${hidden?';opacity:.55':''}">
+      <div class="row" style="gap:10px">
+        <div class="av" style="width:36px;height:36px;background:${c[0]};color:${c[1]};font-size:12px">${avatarImg({name:L.name,avatarSeed:(D.leaderAvatars||{})[id],avatarStyle:(D.leaderAvatarStyles||{})[id]})}</div>
+        <div><div style="font-size:14.5px;font-weight:700;color:var(--t1)">${L.name}${hidden?' <span style="font-size:11px;font-weight:400;color:var(--rd)">(removed)</span>':''}</div><div style="font-size:11.5px;color:var(--t3)">${L.role} · leads ${leads}</div></div>
+      </div>
+      <div class="row" style="gap:8px">${action}</div>
+    </div>`;
+  });
+  const seniors=seniorsList().map(s=>{
+    const c=COL[s.color]||COL.gr;
+    return`<div>
+      <div class="card" style="display:flex;flex-direction:column;gap:10px">
+        <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div class="row" style="gap:10px">
+            <div class="av" style="width:36px;height:36px;background:${c[0]};color:${c[1]};font-size:12px">${avatarImg(s)}</div>
+            <div><div style="font-size:14.5px;font-weight:700;color:var(--t1)">${esc(s.name)}</div><div style="font-size:11.5px;color:var(--t3)">${esc(s.role)} · leads ${TEAM_META[s.team]?.fullLabel||s.team}</div></div>
+          </div>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost" style="${btn}" onclick="openSeniorEditor('${s.id}')"><i class="ti ti-id-badge-2" style="font-size:12px"></i> Edit</button>
+            <button class="btn btn-ghost" style="${btn}" onclick="openAvatarEditor('${s.id}')"><i class="ti ti-edit" style="font-size:12px"></i> Avatar</button>
+            <button class="btn btn-ghost" style="${btn}" onclick="demoteSenior('${s.id}')"><i class="ti ti-arrow-down" style="font-size:12px"></i> Make member</button>
+            <button class="btn btn-rd" style="${btn}" onclick="removeSenior('${s.id}')"><i class="ti ti-trash" style="font-size:12px"></i> Remove</button>
+          </div>
+        </div>
+        ${personBatchesBlock(s)}
+      </div>
+      ${seniorEditTarget===s.id?seniorEditorPanel(s):''}
+      ${avatarEditTarget===s.id?avatarEditorPanel(s.id):''}
+    </div>`;
+  });
+  el.innerHTML=[...builtIn,...seniors].join('');
+  const leadTeam=document.getElementById('lead-team');
+  if(leadTeam&&!leadTeam.options.length)leadTeam.innerHTML=teamOptions('dg');
+  Object.keys(TEAM_META).forEach(t=>{
+    const h=document.getElementById('manage-head-'+t);if(!h)return;
+    const names=teamLeadNames(t);
+    h.textContent='Hierarchy — '+TEAM_META[t].fullLabel+(names.length?' (reports to '+names.join(' & ')+')':'');
+  });
+}
+function refreshPeople(){save();renderManage();renderTeamPgrid();matGrid_init();showLoginGrid();}
+function seniorTitle(team){return'Senior — '+(TEAM_META[team]?.fullLabel||team);}
+function addSenior(){
+  if(!canManageHierarchy())return;
+  const name=document.getElementById('lead-name').value.trim();
+  const team=document.getElementById('lead-team').value;
+  const role=document.getElementById('lead-role').value.trim()||seniorTitle(team);
+  const init=document.getElementById('lead-init').value.trim().toUpperCase();
+  const color=document.getElementById('lead-color').value;
+  if(!name||!init){toast('Name and initials are required','error');return;}
+  const id=init+'_'+Date.now();
+  if(!Array.isArray(D.seniors))D.seniors=[];
+  D.seniors.push({id,name,role,init,color,team,batches:[]});
+  D.tasks[id]={};
+  if(!D.memberPins)D.memberPins={};D.memberPins[id]='0000';
+  ['lead-name','lead-role','lead-init'].forEach(x=>document.getElementById(x).value='');
+  refreshPeople();
+  toast(name+' added as senior of '+TEAM_META[team].fullLabel,'success');
+}
+function promoteMember(id){
+  if(!canManageHierarchy())return;
+  const i=D.members.findIndex(x=>x.id===id);if(i<0)return;
+  const m=D.members[i];
+  if(!confirm('Promote '+m.name+' to senior of '+(TEAM_META[m.team]?.fullLabel||m.team)+'? Their tasks, progress, PIN and batches stay as they are.'))return;
+  D.members.splice(i,1);
+  m.memberRole=m.role;
+  m.role=seniorTitle(m.team);
+  if(!Array.isArray(D.seniors))D.seniors=[];
+  D.seniors.push(m);
+  if(memberEditTarget===id)memberEditTarget=null;
+  if(tPerson===id)tPerson=scopedMembers()[0]?.id||D.members[0]?.id||'AS';
+  refreshPeople();
+  toast(m.name+' promoted to senior','success');
+}
+function demoteSenior(id){
+  if(!canManageHierarchy())return;
+  const i=seniorsList().findIndex(x=>x.id===id);if(i<0)return;
+  const s=D.seniors[i];
+  if(!confirm('Move '+s.name+' back to a regular member of '+(TEAM_META[s.team]?.fullLabel||s.team)+'? Their tasks, progress, PIN and batches stay as they are.'))return;
+  D.seniors.splice(i,1);
+  s.role=s.memberRole||TEAM_META[s.team]?.defaultRole||'Member';
+  delete s.memberRole;
+  D.members.push(s);
+  if(seniorEditTarget===id)seniorEditTarget=null;
+  refreshPeople();
+  toast(s.name+' is now a member of '+(TEAM_META[s.team]?.fullLabel||s.team),'success');
+}
+function removeSenior(id){
+  if(!canManageHierarchy())return;
+  const i=seniorsList().findIndex(x=>x.id===id);if(i<0)return;
+  const s=D.seniors[i];
+  if(!confirm('Remove '+s.name+'? Their tasks and login PIN will be deleted.'))return;
+  delete D.tasks[s.id];if(D.memberPins)delete D.memberPins[s.id];
+  D.seniors.splice(i,1);
+  if(seniorEditTarget===id)seniorEditTarget=null;
+  if(tPerson===id)tPerson=scopedMembers()[0]?.id||D.members[0]?.id||'AS';
+  refreshPeople();
+}
+function removeLeader(id){
+  if(!canManageHierarchy()||id==='HS'||!LEADER_DEFS[id])return;
+  if(!confirm('Remove '+LEADER_DEFS[id].name+' from the hierarchy? They will no longer be able to log in. Their tasks and PIN are kept, so you can restore them later.'))return;
+  if(!Array.isArray(D.hiddenLeaders))D.hiddenLeaders=[];
+  if(!D.hiddenLeaders.includes(id))D.hiddenLeaders.push(id);
+  refreshPeople();
+}
+function restoreLeader(id){
+  if(!canManageHierarchy())return;
+  D.hiddenLeaders=(D.hiddenLeaders||[]).filter(x=>x!==id);
+  refreshPeople();
+  toast(LEADER_DEFS[id].name+' restored','success');
+}
+function openSeniorEditor(id){seniorEditTarget=(seniorEditTarget===id)?null:id;renderManage();}
+function closeSeniorEditor(){seniorEditTarget=null;renderManage();}
+function seniorEditorPanel(s){
+  return`<div class="card" style="border-color:var(--gr2);margin-top:-2px">
+    <div class="fgrid">
+      <div><div class="flbl">Name</div><input class="inp" id="sedit-name" value="${escAttr(s.name)}"></div>
+      <div><div class="flbl">Designation</div><input class="inp" id="sedit-role" value="${escAttr(s.role)}"></div>
+      <div><div class="flbl">Initials</div><input class="inp" id="sedit-init" value="${escAttr(s.init)}" maxlength="3"></div>
+      <div><div class="flbl">Leads team</div><select class="sel" id="sedit-team" style="width:100%">${teamOptions(s.team)}</select></div>
+    </div>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn btn-gr" onclick="saveSeniorEditor()"><i class="ti ti-check"></i> Save</button>
+      <button class="btn btn-ghost" onclick="closeSeniorEditor()" style="margin-left:auto">Cancel</button>
+    </div>
+  </div>`;
+}
+function saveSeniorEditor(){
+  if(!canManageHierarchy())return;
+  const s=seniorsList().find(x=>x.id===seniorEditTarget);if(!s)return;
+  const name=document.getElementById('sedit-name').value.trim();
+  const role=document.getElementById('sedit-role').value.trim();
+  const init=document.getElementById('sedit-init').value.trim().toUpperCase();
+  const team=document.getElementById('sedit-team').value;
+  if(!name||!role||!init){toast('Name, designation and initials are required','error');return;}
+  if(name!==s.name)(D.notes||[]).forEach(n=>{if(!n.ownerId&&n.author===s.name)n.ownerId=s.id;});
+  s.name=name;s.role=role;s.init=init;s.team=team;
+  seniorEditTarget=null;
+  refreshPeople();
+  toast(name+' updated','success');
+}
 function addMemberBatch(memberId){
   const inp=document.getElementById('mbatch-add-'+memberId);
   const name=inp?.value.trim();if(!name)return;
-  const m=D.members.find(x=>x.id===memberId);if(!m)return;
+  const m=findPerson(memberId);if(!m)return;
   if(!Array.isArray(m.batches))m.batches=[];
   m.batches.push(name);
   save();renderManage();
   toast('Batch added','success');
 }
 function removeMemberBatch(memberId,idx){
-  const m=D.members.find(x=>x.id===memberId);if(!m||!Array.isArray(m.batches))return;
+  const m=findPerson(memberId);if(!m||!Array.isArray(m.batches))return;
   m.batches.splice(idx,1);
   save();renderManage();
 }
@@ -2964,7 +3203,8 @@ function renderManage(){
     if(targets[k])targets[k].innerHTML=buckets[k].join('')||`<div class="empty"><i class="ti ti-users"></i>${emptyMsg[k]}</div>`;
   });
   const sel=document.getElementById('pin-member-sel');
-  if(sel)sel.innerHTML=D.members.map(m=>`<option value="${m.id}">${m.name} (${m.init}) — ${TEAM_META[m.team]?.label||m.team}</option>`).join('');
+  if(sel)sel.innerHTML=[...D.members,...seniorsList()].map(m=>`<option value="${m.id}">${esc(m.name)} (${esc(m.init)}) — ${TEAM_META[m.team]?.label||m.team}${D.members.includes(m)?'':' senior'}</option>`).join('');
+  renderLeaders();
   renderAvatarPicker();
   renderLeaderAvatars();
   renderLeaderBatches();
@@ -2973,15 +3213,15 @@ function renderManage(){
 /* ── avatar editor (Manage → edit anyone's avatar) ── */
 const LEADER_NAMES={HS:'Himanshu Sharma',MD:'Mack Donald',RS:'Ritesh Sethi'};
 let avatarEditTarget=null,avatarEditSeeds=[],avatarEditSelected=null,avatarEditStyle=DEFAULT_AVATAR_STYLE;
-function getAvatarEditName(key){return LEADER_NAMES[key]||(D.members.find(x=>x.id===key)||{}).name||key;}
+function getAvatarEditName(key){return LEADER_NAMES[key]||(findPerson(key)||{}).name||key;}
 function getAvatarEditCurrentSeed(key){
   if(LEADER_NAMES[key])return(D.leaderAvatars||{})[key]||LEADER_NAMES[key];
-  const m=D.members.find(x=>x.id===key);
+  const m=findPerson(key);
   return avatarSeedFor(m||{});
 }
 function getAvatarEditCurrentStyle(key){
   if(LEADER_NAMES[key])return(D.leaderAvatarStyles||{})[key]||DEFAULT_AVATAR_STYLE;
-  const m=D.members.find(x=>x.id===key);
+  const m=findPerson(key);
   return avatarStyleFor(m||{});
 }
 function openAvatarEditor(key){
@@ -3004,7 +3244,7 @@ function saveAvatarEditor(){
     if(!D.leaderAvatarStyles)D.leaderAvatarStyles={};
     D.leaderAvatarStyles[avatarEditTarget]=avatarEditStyle;
   }else{
-    const m=D.members.find(x=>x.id===avatarEditTarget);
+    const m=findPerson(avatarEditTarget);
     if(m){m.avatarSeed=avatarEditSelected;m.avatarStyle=avatarEditStyle;}
   }
   avatarEditTarget=null;avatarEditSelected=null;
@@ -3017,7 +3257,7 @@ function resetAvatarEditor(){
     if(D.leaderAvatars)delete D.leaderAvatars[avatarEditTarget];
     if(D.leaderAvatarStyles)delete D.leaderAvatarStyles[avatarEditTarget];
   }else{
-    const m=D.members.find(x=>x.id===avatarEditTarget);
+    const m=findPerson(avatarEditTarget);
     if(m){delete m.avatarSeed;delete m.avatarStyle;}
   }
   avatarEditTarget=null;avatarEditSelected=null;
@@ -3118,7 +3358,7 @@ function setMemberPin(){
   if(!val||!sel.value)return;
   if(!D.memberPins)D.memberPins={};
   D.memberPins[sel.value]=val;save();
-  const name=D.members.find(m=>m.id===sel.value)?.name||sel.value;
+  const name=findPerson(sel.value)?.name||sel.value;
   toast('PIN updated for '+name,'success');
   document.getElementById('pin-member-val').value='';renderManage();
 }
@@ -3176,7 +3416,7 @@ function matGrid_init(){
 function matGrid_syncFromCanonical(){
   let changed=false;
   const sources=[
-    ...D.members.filter(m=>m.team==='dg').map(m=>({id:m.id,batches:m.batches||[]})),
+    ...[...D.members,...seniorsList()].filter(m=>m.team==='dg').map(m=>({id:m.id,batches:m.batches||[]})),
     {id:'HS',batches:(D.headBatches||{}).HS||[]},
   ];
   sources.forEach(src=>{
@@ -3204,7 +3444,7 @@ function matGrid_getMentorGroups(){
   const result=[];
   const himanshu={id:'HS',name:'Himanshu Sharma',isExtra:false,color:'gr',init:'HS',avatarSeed:(D.leaderAvatars||{}).HS,avatarStyle:(D.leaderAvatarStyles||{}).HS};
   if(!MAT_GRID.hidden.includes('HS'))result.push(himanshu);
-  D.members.filter(m=>m.team==='dg').forEach(m=>{
+  [...D.members,...seniorsList()].filter(m=>m.team==='dg').forEach(m=>{
     if(!MAT_GRID.hidden.includes(m.id))
       result.push({id:m.id,name:m.name,isExtra:false,color:m.color,init:m.init});
   });
@@ -3444,7 +3684,7 @@ function dgops_cascadeFromTask(pid,day,i){
 }
 function dgops_batchList(){
   const rows=[];
-  D.members.filter(m=>m.team==='dg').forEach(m=>{
+  [...D.members,...seniorsList()].filter(m=>m.team==='dg').forEach(m=>{
     (m.batches||[]).forEach((b,bi)=>{
       rows.push({key:m.id+'__'+bi,batchName:b,mentorId:m.id,mentorName:m.name});
     });
