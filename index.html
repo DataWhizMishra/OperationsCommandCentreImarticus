@@ -1141,6 +1141,7 @@ input[type=checkbox]:disabled:hover{border-color:var(--t2)}
           <option value="datamis">Data/MIS Institute Alliances — reports to Ritesh</option>
         </select>
       </div>
+      <div><div class="flbl">Designation <span style="color:var(--t3)">(optional)</span></div><input class="inp" id="add-role" placeholder="Defaults to team role"></div>
       <div><div class="flbl">Initials</div><input class="inp" id="add-init" placeholder="e.g. AB" maxlength="3"></div>
       <div><div class="flbl">Colour</div>
         <select class="sel" id="add-color" style="width:100%">
@@ -1890,9 +1891,9 @@ function loginAvatar(id,color,name){
 }
 function loginMemberBtn(m){
   const c=COL[m.color]||COL.gr;
-  return`<button class="lmem" id="lm_${m.id}" onclick="selectProfile('${m.id}','${m.name}','${m.role}','${m.init}','${m.color}','member')">
+  return`<button class="lmem" id="lm_${m.id}" onclick="selectProfile('${m.id}','${jsq(m.name)}','${jsq(m.role)}','${jsq(m.init)}','${m.color}','member')">
     <div class="av lav" style="background:${c[0]};color:${c[1]}">${avatarImg(m)}</div>
-    <div class="lname">${m.name}</div><div class="lrole">${m.role}</div>
+    <div class="lname">${esc(m.name)}</div><div class="lrole">${esc(m.role)}</div>
   </button>`;
 }
 function showLoginGrid(){
@@ -2470,6 +2471,7 @@ let noteType='paragraph';
 let noteDraftItems=[];
 let editingNoteId=null;
 let editDraftItems=[];
+function jsq(s){return escAttr(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"));}
 function esc(s){return(s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function escAttr(s){return esc(s).replace(/"/g,'&quot;');}
 function setNoteType(t){
@@ -2812,7 +2814,10 @@ function manageRow(m,i){
   const c=COL[m.color]||COL.gr;
   const hasPin=D.memberPins&&D.memberPins[m.id]&&D.memberPins[m.id]!=='0000';
   const editing=avatarEditTarget===m.id;
+  const editingInfo=memberEditTarget===m.id;
   const batches=Array.isArray(m.batches)?m.batches:[];
+  const sameTeam=D.members.filter(x=>x.team===m.team);
+  const pos=sameTeam.indexOf(m);
   const teamSelect=`<select class="sel" style="font-size:12.5px;padding:6px 8px;width:auto" onchange="moveTeam(${i},this.value)">
     ${Object.keys(TEAM_META).map(t=>`<option value="${t}"${m.team===t?' selected':''}>${TEAM_META[t].fullLabel}</option>`).join('')}
   </select>`;
@@ -2821,9 +2826,12 @@ function manageRow(m,i){
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div class="row" style="gap:10px">
           <div class="av" style="width:36px;height:36px;background:${c[0]};color:${c[1]};font-size:12px">${avatarImg(m)}</div>
-          <div><div style="font-size:14.5px;font-weight:700;color:var(--t1)">${m.name}</div><div style="font-size:11.5px;color:var(--t3)">${m.role}</div></div>
+          <div><div style="font-size:14.5px;font-weight:700;color:var(--t1)">${esc(m.name)}</div><div style="font-size:11.5px;color:var(--t3)">${esc(m.role)}</div></div>
         </div>
         <div class="row" style="gap:8px;flex-wrap:wrap">
+          <button class="ibtn" title="Move up" onclick="reorderMember('${m.id}',-1)"${pos<=0?' disabled style="opacity:.35"':''}><i class="ti ti-arrow-up" style="font-size:12px"></i></button>
+          <button class="ibtn" title="Move down" onclick="reorderMember('${m.id}',1)"${pos>=sameTeam.length-1?' disabled style="opacity:.35"':''}><i class="ti ti-arrow-down" style="font-size:12px"></i></button>
+          <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="openMemberEditor('${m.id}')"><i class="ti ti-id-badge-2" style="font-size:12px"></i> Edit</button>
           <span style="font-size:11px;color:${hasPin?'var(--gr)':'var(--t3)'}"><i class="ti ti-${hasPin?'lock-check':'lock-open'}" style="font-size:12px"></i> ${hasPin?'PIN set':'Default'}</span>
           <button class="btn btn-ghost" style="font-size:12.5px;padding:6px 11px" onclick="openAvatarEditor('${m.id}')"><i class="ti ti-edit" style="font-size:12px"></i> Avatar</button>
           ${teamSelect}
@@ -2841,8 +2849,51 @@ function manageRow(m,i){
         </div>
       </div>
     </div>
+    ${editingInfo?memberEditorPanel(m):''}
     ${editing?avatarEditorPanel(m.id):''}
   </div>`;
+}
+/* ── member editor (Manage → rename / designation / reorder; Himanshu only) ── */
+let memberEditTarget=null;
+function canManageHierarchy(){return currentUser?.role==='manager';}
+function openMemberEditor(id){memberEditTarget=(memberEditTarget===id)?null:id;renderManage();}
+function closeMemberEditor(){memberEditTarget=null;renderManage();}
+function memberEditorPanel(m){
+  return`<div class="card" style="border-color:var(--gr2);margin-top:-2px">
+    <div class="fgrid">
+      <div><div class="flbl">Name</div><input class="inp" id="medit-name" value="${escAttr(m.name)}"></div>
+      <div><div class="flbl">Designation</div><input class="inp" id="medit-role" value="${escAttr(m.role)}"></div>
+      <div><div class="flbl">Initials</div><input class="inp" id="medit-init" value="${escAttr(m.init)}" maxlength="3"></div>
+    </div>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <button class="btn btn-gr" onclick="saveMemberEditor()"><i class="ti ti-check"></i> Save</button>
+      <button class="btn btn-ghost" onclick="closeMemberEditor()" style="margin-left:auto">Cancel</button>
+    </div>
+  </div>`;
+}
+function saveMemberEditor(){
+  if(!canManageHierarchy())return;
+  const m=D.members.find(x=>x.id===memberEditTarget);if(!m)return;
+  const name=document.getElementById('medit-name').value.trim();
+  const role=document.getElementById('medit-role').value.trim();
+  const init=document.getElementById('medit-init').value.trim().toUpperCase();
+  if(!name||!role||!init){toast('Name, designation and initials are required','error');return;}
+  // legacy notes without ownerId are matched by author name — pin them to this member before the name changes
+  if(name!==m.name)(D.notes||[]).forEach(n=>{if(!n.ownerId&&n.author===m.name)n.ownerId=m.id;});
+  m.name=name;m.role=role;m.init=init;
+  memberEditTarget=null;
+  save();renderManage();renderTeamPgrid();matGrid_init();showLoginGrid();
+  toast(name+' updated','success');
+}
+function reorderMember(id,dir){
+  if(!canManageHierarchy())return;
+  const i=D.members.findIndex(x=>x.id===id);if(i<0)return;
+  const team=D.members[i].team;
+  let j=i+dir;
+  while(j>=0&&j<D.members.length&&D.members[j].team!==team)j+=dir;
+  if(j<0||j>=D.members.length)return;
+  [D.members[i],D.members[j]]=[D.members[j],D.members[i]];
+  save();renderManage();renderTeamPgrid();matGrid_init();showLoginGrid();
 }
 function addMemberBatch(memberId){
   const inp=document.getElementById('mbatch-add-'+memberId);
@@ -3027,16 +3078,19 @@ function renderAvatarPicker(){
 }
 function pickMemberAvatar(seed){newMemberAvatarSeed=(newMemberAvatarSeed===seed)?null:seed;renderAvatarPicker();}
 function moveTeam(i,newTeam){
+  if(!canManageHierarchy())return;
   const m=D.members[i];if(!m)return;
+  const hadDefaultRole=m.role===TEAM_META[m.team]?.defaultRole;
   m.team=newTeam;
-  m.role=TEAM_META[newTeam]?.defaultRole||m.role;
+  if(hadDefaultRole)m.role=TEAM_META[newTeam]?.defaultRole||m.role;
   save();renderManage();renderTeamPgrid();matGrid_init();
   toast(m.name+' moved to '+(TEAM_META[newTeam]?.fullLabel||newTeam),'success');
 }
 function addMember(){
+  if(!canManageHierarchy())return;
   const name=document.getElementById('add-name').value.trim();
   const team=document.getElementById('add-team').value;
-  const role=TEAM_META[team]?.defaultRole||'Member';
+  const role=document.getElementById('add-role').value.trim()||TEAM_META[team]?.defaultRole||'Member';
   const init=document.getElementById('add-init').value.trim().toUpperCase();
   const color=document.getElementById('add-color').value;
   if(!name||!init)return;
@@ -3046,11 +3100,13 @@ function addMember(){
   D.members.push(member);
   D.tasks[id]=['droprecovery','datamis'].includes(team)?{}:JSON.parse(JSON.stringify(D.tasks.AS||{}));
   if(!D.memberPins)D.memberPins={};D.memberPins[id]='0000';
-  ['add-name','add-init'].forEach(x=>document.getElementById(x).value='');
+  ['add-name','add-init','add-role'].forEach(x=>document.getElementById(x).value='');
   newMemberAvatarSeed=null;newMemberAvatarStyle=DEFAULT_AVATAR_STYLE;AV_PICKER_SEEDS=genAvatarSeeds(12);
-  save();renderManage();renderTeamPgrid();matGrid_init();
+  save();renderManage();renderTeamPgrid();matGrid_init();showLoginGrid();
+  toast(name+' added to '+(TEAM_META[team]?.fullLabel||team),'success');
 }
 function removeMember(i){
+  if(!canManageHierarchy())return;
   const m=D.members[i];if(!confirm('Remove '+m.name+'?'))return;
   delete D.tasks[m.id];if(D.memberPins)delete D.memberPins[m.id];
   D.members.splice(i,1);
